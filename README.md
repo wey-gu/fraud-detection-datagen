@@ -17,7 +17,11 @@ julia install.ji
 git clone https://github.com/bkamins/ABCDGraphGenerator.jl.git
 ```
 
+Configure the `config.toml` as you wish, and run:
 
+```bash
+python3 data_generator.py
+```
 
 
 
