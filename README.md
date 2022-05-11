@@ -12,9 +12,6 @@ python3 -m pip install -r requirements.txt
 
 # julia dependencies
 julia install.ji
-
-# install ABCDGraphGenerator.jl
-git clone https://github.com/bkamins/ABCDGraphGenerator.jl.git
 ```
 
 Configure the `config.toml` as you wish, and run:
