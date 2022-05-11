@@ -1,0 +1,4 @@
+Faker==2.0.5
+toml
+numpy
+julia

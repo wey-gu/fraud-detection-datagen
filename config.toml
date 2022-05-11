@@ -1,0 +1,42 @@
+##############################################################################
+## ABCDGraphGenerator.jl Configurations                                     ##
+##############################################################################
+d_min = "2"                   # minimum degree
+d_max = "6"                   # maximum degree
+c_min = "100"                 # minimum cluster size
+c_max = "1000"                # maximum cluster size
+c_max_iter = "1000"           # maximum number of iterations for sampling cluster sizes
+n = "100000"                  # number of contact vertices in graph
+##############################################################################
+seed = "42"                   # RNG seed, use "" for no seeding
+t1 = "3"                      # power-law exponent for degree distribution
+d_max_iter = "1000"           # maximum number of iterations for sampling degrees
+t2 = "2"                      # power-law exponent for cluster size distribution
+# Exactly one of xi and mu must be passed as Float64. Also if xi is provided islocal must be set to false or omitted.
+xi = "0.2"                    # fraction of edges to fall in background graph
+#mu = "0.2"                   # mixing parameter
+islocal = "false"             # if "true" mixing parameter is restricted to local cluster, otherwise it is global
+isCL = "false"                # if "false" use configuration model, if "true" use Chung-Lu
+degreefile = "data/abcd/deg.dat"        # name of file do generate that contains vertex degrees
+communitysizesfile = "data/abcd/cs.dat" # name of file do generate that contains community sizes
+communityfile = "data/abcd/com.dat"     # name of file do generate that contains assignments of vertices to communities
+networkfile = "data/abcd/edge.dat"      # name of file do generate that contains edges of the generated graph
+##############################################################################
+person_id_prefix = "p_"
+loan_application_id_prefix = "la_"
+data_language = "zh_CN"
+phone_number_count = "6000"
+phone_number_id_prefix = "pn_"
+device_count = "3000"
+device_id_prefix = "dev_"
+corporation_count = "9500"
+corporation_id_prefix = "co_"
+chance_of_corporation_risky_percentage = "1.3" # 1.3% of chance of a corporation being risky
+chance_of_applicant_risky_percentage = "2.3" # 1.3% of chance of a applicant being risky
+loan_application_count = "5000"
+##############################################################################
+relation_via_phone_num_ratio = "0.2"
+relation_via_device_ratio = "0.45"
+relation_shared_employer_ratio = "0.1"
+relation_via_employer_phone_num_ratio = "0.05" # rest is family relation connected
+##############################################################################
