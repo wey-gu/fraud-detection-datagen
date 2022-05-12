@@ -4,7 +4,7 @@ TBD, import the sample data or generate your own with this project to Nebula Gra
 
 ## How to generate data
 
-Install Python and Julia and then install dependencies:
+Install Python3 and Julia and then install dependencies with:
 
 ```bash
 # python dependencies
@@ -20,7 +20,7 @@ Configure the `config.toml` as you wish, and run:
 python3 data_generator.py
 ```
 
-
+Data will be output under `data` folder, the files under `data_sample` could be used if it fits your needs.
 
 ## Graph Model
 
@@ -67,3 +67,28 @@ The steps are:
    `shared a phone number`, `shared an employer`,  `shared a device`, `with a phone number of one's employer`, `is a relative of`
 
 3. Generate Loan Applications, thus adding contact(person) a vertex tag of `Loan Applicant` and an `applied_for_loan` edge from the given person to the `Loan Application`.
+
+
+
+## Data Explanation
+
+```bash
+$tree data
+data
+├── abcd                  # raw data with ABCD Sampler, reference only
+│   ├── com.dat           # vertex -> community
+│   ├── cs.dat            # community size
+│   ├── deg.dat           # vertex degree
+│   └── edge.dat          # edges(which construct the community)
+├── applicant_application_relationship.csv # app vertex and person-applied-> app edge
+├── corporation.csv       # corporation vertex
+├── device.csv            # device vertex
+├── is_relative_relationship.csv # is_relative relationship
+├── person.csv            # contact vertex
+├── phone_num.csv         # phone number vertex
+├── shared_device_relationship.csv # (:p) -[:used_dev]->(:dev)<-[:used_dev]-(:p)
+├── shared_employer_relationship.csv # (:p) -[:worked_for]->(:corp)<-[:worked_for]-(:p)
+├── shared_phone_num_relationship.csv # (src:person) -[:is_related_to]->(dst:person)
+└── shared_via_employer_phone_num_relationship.csv # (:p) -[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
+```
+
