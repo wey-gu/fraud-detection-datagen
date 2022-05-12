@@ -43,9 +43,10 @@ islocal = haskey(conf, "islocal") ? parse(Bool, conf["islocal"]) : false
 
 p = ABCDGraphGenerator.ABCDParams(degs, coms, μ, ξ, isCL, islocal)
 edges, clusters = ABCDGraphGenerator.gen_graph(p)
+prefix = conf["person_id_prefix"]
 open(conf["networkfile"], "w") do io
     for (a, b) in sort!(collect(edges))
-        println(io, a, ",", b)
+        println(io, prefix, a, ",", prefix, b)
     end
 end
 open(conf["communityfile"], "w") do io
