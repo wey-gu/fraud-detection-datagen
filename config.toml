@@ -6,7 +6,7 @@ d_max = "6"                   # maximum degree
 c_min = "100"                 # minimum cluster size
 c_max = "1000"                # maximum cluster size
 c_max_iter = "1000"           # maximum number of iterations for sampling cluster sizes
-n = "100000"                  # number of contact vertices in graph
+n = "100000"                  # number of contact/person vertices in graph
 ##############################################################################
 seed = "42"                   # RNG seed, use "" for no seeding
 t1 = "3"                      # power-law exponent for degree distribution
@@ -22,22 +22,27 @@ communitysizesfile = "data/abcd/cs.dat" # name of file do generate that contains
 communityfile = "data/abcd/com.dat"     # name of file do generate that contains assignments of vertices to communities
 networkfile = "data/abcd/edge.dat"      # name of file do generate that contains edges of the generated graph
 ##############################################################################
-person_id_prefix = "p_"
-loan_application_id_prefix = "la_"
-data_language = "en_US" # Change to "zh_CN" for generating Chinese version dataset
-phone_number_count = "6000"
-phone_number_id_prefix = "pn_"
-device_count = "3000"
-device_id_prefix = "dev_"
-corporation_count = "9500"
-corporation_id_prefix = "co_"
-chance_of_corporation_risky_percentage = "1.3" # 1.3% of chance of a corporation being risky
-chance_of_applicant_risky_percentage = "2.3" # 1.3% of chance of a applicant being risky
-loan_application_count = "5000"
-chance_of_application_rejected = "0.01" # 1% of chance of a loan application being rejected
+## Data Generator Configurations                                            ##
 ##############################################################################
-relation_via_phone_num_ratio = "0.2"
-relation_via_device_ratio = "0.45"
-relation_shared_employer_ratio = "0.1"
-relation_via_employer_phone_num_ratio = "0.05" # rest is family relation connected
+phone_number_id_prefix = "pn_"                 # prefix for phone number id
+phone_number_count = "6000"                    # number of phone numbers to generate
+person_id_prefix = "p_"                        # prefix for person id
+loan_application_id_prefix = "la_"             # prefix for loan application id
+loan_application_count = "5000"                # number of loan applications to generate
+device_id_prefix = "dev_"                      # prefix for device id
+device_count = "3000"                          # number of devices to generate
+data_language = "en_US"                        # Change to "zh_CN" for generating Chinese version dataset
+corporation_id_prefix = "co_"                  # prefix for corporation id
+corporation_count = "9500"                     # number of corporations to generate
+chance_of_corporation_risky_percentage = "1.3" # "1.3" means 1.3% of chance for a corporation being risky
+chance_of_application_rejected = "0.01"        # "1" mmeas 1% of chance for a loan application being rejected
+chance_of_applicant_risky_percentage = "2.3"   # "2.3" means 1.3% of chance for a applicant being risky
+##############################################################################
+## This defines how edges are breaking down into different patterns         ##
+##############################################################################
+relation_via_phone_num_ratio = "0.2"           # (src:person) -[:is_related_to]->(dst:person)
+relation_via_device_ratio = "0.45"             # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
+relation_shared_employer_ratio = "0.1"         # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
+relation_via_employer_phone_num_ratio = "0.05" # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
+# is_related_to_ratio = 1 - sum(<above-all>)   # (:p)-[:is_related_to]->(:p)
 ##############################################################################

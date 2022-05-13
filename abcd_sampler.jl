@@ -1,5 +1,5 @@
 #
-# This file is a copy from https://github.com/bkamins/ABCDGraphGenerator.jl/
+# This file is a forked copy from https://github.com/bkamins/ABCDGraphGenerator.jl/
 #
 # The abcd_sampler.jl is licensed under the MIT License
 # Copyright (c) 2019 Bogumił Kamiński, Paweł Prałat, François Théberge

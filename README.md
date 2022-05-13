@@ -14,7 +14,7 @@ python3 -m pip install -r requirements.txt
 julia install.ji
 ```
 
-Configure the `config.toml` as you wish, and run:
+Configure the `config.toml` as you wish, where options were documented inline, then just run:
 
 ```bash
 python3 data_generator.py
@@ -83,7 +83,7 @@ data
 ├── applicant_application_relationship.csv # app vertex and person-applied-> app edge
 ├── corporation.csv       # corporation vertex
 ├── device.csv            # device vertex
-├── is_relative_relationship.csv # is_relative relationship
+├── is_relative_relationship.csv # is_relative (:p)-[:is_related_to]->(:p)
 ├── person.csv            # contact vertex
 ├── phone_num.csv         # phone number vertex
 ├── shared_device_relationship.csv # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
