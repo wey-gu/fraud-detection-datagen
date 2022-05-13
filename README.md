@@ -20,7 +20,7 @@ Configure the `config.toml` as you wish, and run:
 python3 data_generator.py
 ```
 
-Data will be output under `data` folder, the files under `data_sample` could be used if it fits your needs.
+Data will be output under the `data` folder, the files under `data_sample` could be used if it fits your needs.
 
 ## Graph Model
 
@@ -52,7 +52,7 @@ edge types
 
 We will be leveraging [py-Faker](https://github.com/joke2k/faker) to generate relatively reasonable properties, and [ABCDGraphGenerator.jl](https://github.com/bkamins/ABCDGraphGenerator.jl) to generate relationships with defined community structure.
 
-As the relationship should be typed differently, i.e, `shared_phone`, `shared_employer`, `shared_device`, etc, the generation process would be as the following digram.
+As the relationship should be typed differently, i.e, `shared_phone`, `shared_employer`, `shared_device`, etc, the generation process would be as the following diagram.
 
 ![fraud_detection_data_gen_process](images/fraud_detection_data_gen_process.svg)
 
@@ -86,9 +86,9 @@ data
 ├── is_relative_relationship.csv # is_relative relationship
 ├── person.csv            # contact vertex
 ├── phone_num.csv         # phone number vertex
-├── shared_device_relationship.csv # (:p) -[:used_dev]->(:dev)<-[:used_dev]-(:p)
-├── shared_employer_relationship.csv # (:p) -[:worked_for]->(:corp)<-[:worked_for]-(:p)
+├── shared_device_relationship.csv # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
+├── shared_employer_relationship.csv # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
 ├── shared_phone_num_relationship.csv # (src:person) -[:is_related_to]->(dst:person)
-└── shared_via_employer_phone_num_relationship.csv # (:p) -[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
+└── shared_via_employer_phone_num_relationship.csv # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
 ```
 
