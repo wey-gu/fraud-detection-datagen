@@ -20,7 +20,9 @@ Configure the `config.toml` as you wish, where options were documented inline, t
 python3 data_generator.py
 ```
 
-Data will be output under the `data` folder, the files under `data_sample` could be used if it fits your needs.
+Data will be output under the `data` folder, the files under `data_sample` could be used if it fits your needs. The process should looks like:
+
+https://user-images.githubusercontent.com/1651790/168299297-83b232a1-23b4-44e0-b569-595b70a2b0da.mp4
 
 ## Graph Model
 
