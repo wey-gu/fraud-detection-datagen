@@ -24,7 +24,7 @@ networkfile = "data/abcd/edge.dat"      # name of file do generate that contains
 ##############################################################################
 person_id_prefix = "p_"
 loan_application_id_prefix = "la_"
-data_language = "zh_CN"
+data_language = "en_US" # Change to "zh_CN" for generating Chinese version dataset
 phone_number_count = "6000"
 phone_number_id_prefix = "pn_"
 device_count = "3000"
