@@ -1,4 +1,6 @@
 using Pkg
 
+@info "Installing Julia dependencies"
+
 Pkg.add("PyCall")
 Pkg.add(PackageSpec(url="https://github.com/bkamins/ABCDGraphGenerator.jl"))

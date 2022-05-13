@@ -6,6 +6,11 @@ import toml
 from collections import OrderedDict
 from faker import Faker
 from julia import Main
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+from rich.syntax import Syntax
+
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +19,17 @@ CONF_PATH = "config.toml"
 ABCD_SAMPLER_PATH = "abcd_sampler.jl"
 WRITE_BATCH = 1000
 
+
+console = Console()
+
+def log(message):
+    console.print("\n[bold bright_cyan][ Info:[/bold bright_cyan]", message)
+
+def title(title, description):
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column(title, style="dim", width=36)
+    table.add_row(description)
+    console.print("\n", table)
 
 class FraudDetectionDataGenerator:
     """
@@ -40,6 +56,9 @@ class FraudDetectionDataGenerator:
     def get_conf(self):
         with open(self.conf_path) as conf_file:
             conf = conf_file.read()
+            log("Getting [bold magenta]config.toml[/bold magenta] parsed as:")
+            syntax = Syntax(conf, "toml", theme="monokai", line_numbers=False)
+            console.print(syntax)
             return toml.loads(conf)
 
     def init_julia(self):
@@ -49,8 +68,7 @@ class FraudDetectionDataGenerator:
         julia.install()
         return julia.Julia()
 
-    @staticmethod
-    def run_abcd_sample(data_path):
+    def run_abcd_sample(self, data_path):
         """
         Run ABCD sample.
 
@@ -59,7 +77,9 @@ class FraudDetectionDataGenerator:
         # Create data directory if not exists
         Path(data_path).mkdir(parents=True, exist_ok=True)
         # Run ABCD sample to generate Relationship data with community structure
+        log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta] to generate community structured data...")
         Main.include(ABCD_SAMPLER_PATH)
+        log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta]...done. Data generated at [bold magenta]{self.abcd_data_dir}[/bold magenta]")
 
     @staticmethod
     def csv_writer(file_path,
@@ -242,56 +262,69 @@ class FraudDetectionDataGenerator:
         """
         Generate contacts.
         """
+        log("Generating contacts...")
+        path = "data/person.csv"
         header = ["person_id", "name", "gender", "birthday"]
-        self.csv_writer("data/person.csv",
+        self.csv_writer(path,
                         self.person_count,
                         self.person_generator,
                         index=True,
                         index_prefix=self.person_id_prefix,
                         header=header)
+        log(f"Generating contacts...done. Data generated at: [bold magenta]{path}[/bold magenta]")
 
     def generate_phones_numbers(self):
         """
         Generate phones numbers.
         """
+        log("Generating phones numbers...")
+        path = "data/phone_number.csv"
         header = ["phone_number_id", "phone_number"]
-        self.csv_writer("data/phone_num.csv",
+        self.csv_writer(path,
                         self.phone_number_count,
                         self.phone_generator,
                         index=True,
                         index_prefix=self.phone_number_id_prefix,
                         header=header)
+        log(f"Generating phones numbers...done. Data generated at: [bold magenta]{path}[/bold magenta]")
 
     def generate_devices(self):
         """
         Generate devices.
         """
+        log("Generating devices...")
+        path = "data/device.csv"
         header = ["device_id", "device_name"]
-        self.csv_writer("data/device.csv",
+        self.csv_writer(path,
                         self.device_count,
                         self.device_generator,
                         index=True,
                         index_prefix=self.device_id_prefix,
                         header=header)
+        log(f"Generating devices...done. Data generated at: [bold magenta]{path}[/bold magenta]")
 
     def generate_corporations(self):
         """
         Generate corporations.
         """
+        log("Generating corporations...")
+        path = "data/corporation.csv"
         header = [
             "corp_id", "corp_name", "corp_address", "is_risky", "risk_profile"
         ]
-        self.csv_writer("data/corporation.csv",
+        self.csv_writer(path,
                         self.corporation_count,
                         self.corporation_generator,
                         index=True,
                         index_prefix=self.corporation_id_prefix,
                         header=header)
+        log(f"Generating corporations...done. Data generated at: [bold magenta]{path}[/bold magenta]")
 
     def generate_clusterred_contacts_relations(self):
         """
         Generate clusterred contacts relations.
         """
+        log("Generating clusterred contacts/person relations...")
         self.generate_phones_numbers()
         self.generate_devices()
         self.generate_corporations()
@@ -312,7 +345,10 @@ class FraudDetectionDataGenerator:
             (shared_phone_num_count, shared_device_count,
              shared_employer_count, shared_via_employer_phone_num_count))
 
-        # (src:person) -[:with_phone_num]->(pn:phone_number)<-[:with_phone_num]-(dst:person)
+        # (src:person)-[:with_phone_num]->(pn:phone_number)<-[:with_phone_num]-(dst:person)
+        log("Generating shared phone number relationships in pattern:")
+        _ = "(src:person)-[:with_phone_num]->(pn:phone_number)<-[:with_phone_num]-(dst:person)"
+        console.print(Syntax(_, "cypher", theme="monokai", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_phone_num_relationship.csv",
                         shared_phone_num_count,
@@ -328,13 +364,18 @@ class FraudDetectionDataGenerator:
             (edges[0:shared_phone_num_count], shared_num_rels), axis=1)
         # header "src_person_id, dst_person_id, phone_num_id"
         header = ["src_id", "dst_id", "pn_id"]
-        concat_shared_num_rels.to_csv("data/shared_phone_num_relationship.csv",
+        _path = "data/shared_phone_num_relationship.csv"
+        concat_shared_num_rels.to_csv(_path,
                                       sep=",",
                                       index=False,
                                       header=header)
         os.remove("data/_shared_phone_num_relationship.csv")
+        log(f"Generating shared phone number relationships ...done. Data generated at: [bold magenta]{_path}[/bold magenta]")
 
-        # (src:person) -[:used_device]->(d:device)<-[:used_device]-(dst:person)
+        # (src:person)-[:used_device]->(d:device)<-[:used_device]-(dst:person)
+        _ = "(src:person)-[:used_device]->(d:device)<-[:used_device]-(dst:person)"
+        log("Generating shared device relationships in pattern:")
+        console.print(Syntax(_, "cypher", theme="monokai", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_device_relationship.csv",
                         shared_device_count,
@@ -353,13 +394,18 @@ class FraudDetectionDataGenerator:
             "src_id", "dst_id", "d_id", "src_device_start_time",
             "dst_device_start_time"
         ]
-        concat_shared_device_rels.to_csv("data/shared_device_relationship.csv",
+        _path = "data/shared_device_relationship.csv"
+        concat_shared_device_rels.to_csv(_path,
                                          sep=",",
                                          index=False,
                                          header=header)
         os.remove("data/_shared_device_relationship.csv")
+        log(f"Generating shared device relationships ...done. Data generated at: [bold magenta]{_path}[/bold magenta]")
 
-        # (src:person) -[:worked_for]->(corp:corporation)<-[:worked_for]-(dst:person)
+        # (src:person)-[:worked_for]->(corp:corporation)<-[:worked_for]-(dst:person)
+        _ = "(src:person)-[:worked_for]->(corp:corporation)<-[:worked_for]-(dst:person)"
+        log("Generating shared employer relationships in pattern:")
+        console.print(Syntax(_, "cypher", theme="monokai", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_employer_relationship.csv",
                         shared_employer_count,
@@ -380,14 +426,19 @@ class FraudDetectionDataGenerator:
             "src_id", "dst_id", "corp_id", "src_work_for_start_time",
             "dst_work_for_start_time"
         ]
+        _path = "data/shared_employer_relationship.csv"
         concat_shared_employer_rels.to_csv(
-            "data/shared_employer_relationship.csv",
+            _path,
             sep=",",
             index=False,
             header=header)
         os.remove("data/_shared_employer_relationship.csv")
+        log(f"Generating shared employer relationships ...done. Data generated at: [bold magenta]{_path}[/bold magenta]")
 
         # (src:person) -[:worked_for]->(corp:corporation)->(pn:phone_number)<-[:with_phone_num]-(dst:person)
+        _ = "(src:person) -[:worked_for]->(corp:corporation)->(pn:phone_number)<-[:with_phone_num]-(dst:person)"
+        log("Generating shared phone number and employer relationships in pattern:")
+        console.print(Syntax(_, "cypher", theme="monokai", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_via_employer_phone_num_relationship.csv",
                         shared_via_employer_phone_num_count,
@@ -407,14 +458,18 @@ class FraudDetectionDataGenerator:
         header = [
             "src_id", "dst_id", "corp_id", "pn_id", "src_work_for_start_time"
         ]
+        _path = "data/shared_via_employer_phone_num_relationship.csv"
         concat_shared_via_employer_phone_num_rels.to_csv(
-            "data/shared_via_employer_phone_num_relationship.csv",
+            _path,
             sep=",",
             index=False,
             header=header)
         os.remove("data/_shared_via_employer_phone_num_relationship.csv")
+        log(f"Generating shared phone number and employer relationships ...done. Data generated at: [bold magenta]{_path}[/bold magenta]")
 
         # (src:person) -[:is_related_to]->(dst:person)
+        _ = "(src:person) -[:is_related_to]->(dst:person)"
+        log("Generating shared relationship in pattern:")
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_is_relative_relationship.csv",
                         is_relative_count,
@@ -431,14 +486,19 @@ class FraudDetectionDataGenerator:
             axis=1)
         # header "src_person_id, dst_person_id, degree"
         header = ["src_id", "dst_id", "degree"]
-        concat_is_relative_rels.to_csv("data/is_relative_relationship.csv",
+        _path = "data/is_relative_relationship.csv"
+        concat_is_relative_rels.to_csv(_path,
                                        sep=",",
                                        index=False,
                                        header=header)
         os.remove("data/_is_relative_relationship.csv")
+        log(f"Generating shared relationship ...done. Data generated at: [bold magenta]{_path}[/bold magenta]")
 
     def generate_applicants_and_applications(self):
         # (src:loan_applicant:person) -[:applied_for_loan]->(app:loan_application)
+        _ = "(src:loan_applicant:person) -[:applied_for_loan]->(app:loan_application)"
+        log("Generating loan application relationship in pattern:")
+        console.print(Syntax(_, "cypher", theme="monokai", line_numbers=False))
         header = [
             "loan_application_id", "appliant_person_id", "address", "degree",
             "occupation", "salary", "is_risky", "risk_profile",
@@ -446,23 +506,37 @@ class FraudDetectionDataGenerator:
             "approval_status", "application_type", "rejection_reason",
             "applied_for_loan_start_time"
         ]
-        self.csv_writer("data/applicant_application_relationship.csv",
+        _path = "data/applicant_application_relationship.csv"
+        self.csv_writer(_path,
                         self.loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
                         index_prefix=self.conf["loan_application_id_prefix"],
                         header=header)
+        log(f"Generating loan application relationship ...done. Data generated at: [bold magenta]{_path}[/bold magenta]")
 
 
 if __name__ == "__main__":
 
-    gen = FraudDetectionDataGenerator()
-    # Step 0: Generate contacts(person) as vertices
-    gen.generate_contacts()
-    # Step 1: Run ABCD sample to generate relationship data with community structure
-    gen.init_julia()
-    gen.run_abcd_sample(gen.abcd_data_dir)
-    # Step 2: Distribute relationships to different patterns
-    gen.generate_clusterred_contacts_relations()
-    # Step 3: Generate applicant and applications
-    gen.generate_applicants_and_applications()
+    with Progress() as progress:
+
+        task = progress.add_task("[cyan]Progress:", total=5)
+
+        gen = FraudDetectionDataGenerator()
+        title("[bold blue][ Step 0 ] [/bold blue]", "Generate contacts(person) as vertices")
+        progress.advance(task)
+        gen.generate_contacts()
+        title("[bold blue][ Step 1 ] [/bold blue]", "Run ABCD sample to generate relationship data with community structure")
+        
+        progress.advance(task)
+        gen.init_julia()
+        gen.run_abcd_sample(gen.abcd_data_dir)
+        progress.advance(task)
+
+        title("[bold blue][ Step 2 ] [/bold blue]", "Distribute relationships to different patterns")
+        gen.generate_clusterred_contacts_relations()
+        progress.advance(task)
+
+        title("[bold blue][ Step 3 ] [/bold blue]", "Generate applicant and applications")
+        gen.generate_applicants_and_applications()
+        progress.advance(task)

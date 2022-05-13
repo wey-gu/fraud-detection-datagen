@@ -8,8 +8,7 @@ using Pkg
 using ABCDGraphGenerator
 using Random
 
-@info "Usage: julia abcd_sampler.jl config_filename"
-@info "For the syntax of config_filename see example_config.toml file"
+@info "Parsing configuration file: config.toml"
 
 conf = Pkg.TOML.parsefile("config.toml")
 isempty(conf["seed"]) || Random.seed!(parse(Int, conf["seed"]))
