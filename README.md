@@ -77,25 +77,25 @@ The steps are:
 ```bash
 $tree data
 data
-├── abcd            # raw data with ABCD Sampler, reference only
-│   ├── com.dat     # vertex -> community
-│   ├── cs.dat      # community size
-│   ├── deg.dat     # vertex degree
-│   └── edge.dat    # edges(which construct the community)
+├── abcd             # raw data with ABCD Sampler, reference only
+│   ├── com.dat      # vertex -> community
+│   ├── cs.dat       # community size
+│   ├── deg.dat      # vertex degree
+│   └── edge.dat     # edges(which construct the community)
 ├── applicant_application_relationship.csv
-│                   # app vertex and person-applied-> app edge
-├── corporation.csv # corporation vertex
-├── device.csv      # device vertex
+│                    # app vertex and person-applied-> app edge
+├── corporation.csv  # corporation vertex
+├── device.csv       # device vertex
 ├── is_relative_relationship.csv
-│                   # is_relative (:p)-[:is_related_to]->(:p)
-├── person.csv      # contact vertex
-├── phone_num.csv   # phone number vertex
+│                    # is_relative (:p)-[:is_related_to]->(:p)
+├── person.csv       # contact vertex
+├── phone_number.csv # phone number vertex
 ├── shared_device_relationship.csv
-│                   # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
+│                    # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
 ├── shared_employer_relationship.csv
-│                   # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
+│                    # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
 ├── shared_phone_num_relationship.csv
-│                   # (src:person) -[:is_related_to]->(dst:person)
+│                    # (src:person) -[:is_related_to]->(dst:person)
 └── shared_via_employer_phone_num_relationship.csv
     # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
 ```
