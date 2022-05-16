@@ -1,5 +1,6 @@
 import csv
 import os
+import re
 import julia
 import toml
 
@@ -148,8 +149,9 @@ class FraudDetectionDataGenerator:
         is_risky = self.faker.boolean(chance_of_getting_true=float(
             self.conf["chance_of_corporation_risky_percentage"]))
         risk_profile = "NA" if not is_risky else self.faker.sentence()
-        return (self.faker.company(), self.faker.address(), is_risky,
-                risk_profile)
+        return (re.escape(self.faker.company().replace(", ", "_")),
+                re.escape(self.faker.address().replace("\n", " ").replace(",", " ")),
+                is_risky, risk_profile)
 
     def loan_applicant_generator(self):
         """
@@ -158,9 +160,9 @@ class FraudDetectionDataGenerator:
         is_risky = self.faker.boolean(chance_of_getting_true=float(
             self.conf["chance_of_applicant_risky_percentage"]))
         risk_profile = "NA" if not is_risky else self.faker.sentence()
-        return (self.faker.address(),
+        return (re.escape(self.faker.address().replace("\n", " ").replace(",", " ")),
                 self.faker.random_element(
-                    elements=["Bachelor", "Master", "PhD"]), self.faker.job(),
+                    elements=["Bachelor", "Master", "PhD"]), re.escape(self.faker.job().replace(",", " ")),
                 self.faker.random_number(digits=6), is_risky, risk_profile)
 
     def loan_application_generator(self):
@@ -510,45 +512,54 @@ class FraudDetectionDataGenerator:
         log("Generating loan application relationship in pattern:")
         console.print(Syntax(_, "cypher", line_numbers=False))
         header = [
-            "loan_application_id", "appliant_person_id", "address", "degree",
+            "loan_application_id", "person_id", "address", "degree",
             "occupation", "salary", "is_risky", "risk_profile",
             "apply_agent_id", "apply_date", "application_id",
             "approval_status", "application_type", "rejection_reason",
             "applied_for_loan_start_time"
         ]
-        _path = "data/applicant_application_relationship.csv"
+        _path = "data/_applicant_application_relationship.csv"
         self.csv_writer(_path,
                         self.loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
                         index_prefix=self.conf["loan_application_id_prefix"],
                         header=header)
+        applicant_application = pd.read_csv("data/_applicant_application_relationship.csv",
+                                       delimiter=",")
+        person = pd.read_csv("data/person.csv", delimiter=",")
+        final_result = pd.merge(applicant_application, person, on="person_id")
+        final_result.to_csv("data/applicant_application_relationship.csv",
+                            sep=",",
+                            index=False)
+        os.remove("data/_applicant_application_relationship.csv")
+
         log(f"Generating loan application relationship ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
 
 OUTPUT_EXPLANATION = """
 $ tree
 data
-├── abcd            # raw data with ABCD Sampler, reference only
-│   ├── com.dat     # vertex -> community
-│   ├── cs.dat      # community size
-│   ├── deg.dat     # vertex degree
-│   └── edge.dat    # edges(which construct the community)
+├── abcd             # raw data with ABCD Sampler, reference only
+│   ├── com.dat      # vertex -> community
+│   ├── cs.dat       # community size
+│   ├── deg.dat      # vertex degree
+│   └── edge.dat     # edges(which construct the community)
 ├── applicant_application_relationship.csv
-│                   # app vertex and person-applied-> app edge
-├── corporation.csv # corporation vertex
-├── device.csv      # device vertex
+│                    # app vertex and person-applied-> app edge
+├── corporation.csv  # corporation vertex
+├── device.csv       # device vertex
 ├── is_relative_relationship.csv
-│                   # is_relative (:p)-[:is_related_to]->(:p)
-├── person.csv      # contact vertex
-├── phone_num.csv   # phone number vertex
+│                    # is_relative (:p)-[:is_related_to]->(:p)
+├── person.csv       # contact vertex
+├── phone_number.csv # phone number vertex
 ├── shared_device_relationship.csv
-│                   # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
+│                    # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
 ├── shared_employer_relationship.csv
-│                   # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
+│                    # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
 ├── shared_phone_num_relationship.csv
-│                   # (src:person) -[:is_related_to]->(dst:person)
+│                    # (src:person) -[:is_related_to]->(dst:person)
 └── shared_via_employer_phone_num_relationship.csv
-                    # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
+                     # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
 """
 
 if __name__ == "__main__":
@@ -562,7 +573,7 @@ if __name__ == "__main__":
         progress.advance(task)
         gen.generate_contacts()
         title("[bold blue][ Step 1 ] [/bold blue]", "Run ABCD sample to generate relationship data with community structure")
-        
+
         progress.advance(task)
         gen.init_julia()
         gen.run_abcd_sample(gen.abcd_data_dir)
