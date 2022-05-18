@@ -540,10 +540,10 @@ OUTPUT_EXPLANATION = """
 $ tree
 data
 ├── abcd             # raw data with ABCD Sampler, reference only
-│   ├── com.dat      # vertex -> community
-│   ├── cs.dat       # community size
-│   ├── deg.dat      # vertex degree
-│   └── edge.dat     # edges(which construct the community)
+│   ├── com.dat      # vertex -> community
+│   ├── cs.dat       # community size
+│   ├── deg.dat      # vertex degree
+│   └── edge.dat     # edges(which construct the community)
 ├── applicant_application_relationship.csv
 │                    # app vertex and person-applied-> app edge
 ├── corporation.csv  # corporation vertex

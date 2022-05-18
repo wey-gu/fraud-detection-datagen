@@ -74,14 +74,28 @@ The steps are:
 
 ## Data Explanation
 
+See comments inline, i.e., for `shared_via_employer_phone_num_relationship.csv`, its comment is:
+```cypher
+(:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
+```
+This means one line of records in the CSV file contains three edges and four vertices:
+- `:p` is a person vertex tag
+- `worked_for` is a edge type between `:p` and `:corp`
+- `:corp` is a corporation vertex tag
+- `with_phone_num` is a edge type between corporation and phone_num
+- `:phone_num` is a phone number vertex tag
+- `with_phone_num` is a edge type between phone_num and person
+- `:p` is another person vertex tag
+
+
 ```bash
 $tree data
 data
 ├── abcd             # raw data with ABCD Sampler, reference only
-│   ├── com.dat      # vertex -> community
-│   ├── cs.dat       # community size
-│   ├── deg.dat      # vertex degree
-│   └── edge.dat     # edges(which construct the community)
+│   ├── com.dat      # vertex -> community
+│   ├── cs.dat       # community size
+│   ├── deg.dat      # vertex degree
+│   └── edge.dat     # edges(which construct the community)
 ├── applicant_application_relationship.csv
 │                    # app vertex and person-applied-> app edge
 ├── corporation.csv  # corporation vertex
