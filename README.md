@@ -4,13 +4,13 @@ TBD, import the sample data or generate your own with this project to Nebula Gra
 
 ## How to generate data
 
-Install Python3 and Julia and then install dependencies with:
+Install Python3 and [Julia](https://www.google.com/search?q=how+to+install+julia) first, then install dependencies with:
 
 ```bash
 # python dependencies
 python3 -m pip install -r requirements.txt
 
-# julia dependencies
+# julia dependencies, please install julia before running this line
 julia install.ji
 ```
 
