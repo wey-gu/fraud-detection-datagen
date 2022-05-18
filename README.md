@@ -95,7 +95,7 @@ data
 ├── shared_employer_relationship.csv
 │                    # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
 ├── shared_phone_num_relationship.csv
-│                    # (src:person) -[:is_related_to]->(dst:person)
+│                    # (:p)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
 └── shared_via_employer_phone_num_relationship.csv
     # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
 ```
