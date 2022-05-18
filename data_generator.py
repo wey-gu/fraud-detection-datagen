@@ -559,7 +559,7 @@ data
 ├── shared_phone_num_relationship.csv
 │                    # (:p)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
 └── shared_via_employer_phone_num_relationship.csv
-                     # (:p)-[:worked_for]->(:corp)->(:phone_num)<-[:with_phone_num]-(:p)
+    # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
 """
 
 if __name__ == "__main__":
