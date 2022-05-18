@@ -216,7 +216,7 @@ class FraudDetectionDataGenerator:
             device_id, src_device_start_time, dst_device_start_time
         """
         return (
-            f"{self.phone_number_id_prefix}{self.faker.random_number() % self.phone_number_count + 1}",
+            f"{self.device_id_prefix}{self.faker.random_number() % self.device_count + 1}",
             self.faker.date_between(start_date="-3y", end_date="today"),
             self.faker.date_between(start_date="-3y", end_date="today"))
 
