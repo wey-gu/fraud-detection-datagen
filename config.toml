@@ -28,7 +28,6 @@ phone_number_id_prefix = "pn_"                 # prefix for phone number id
 phone_number_count = "6000"                    # number of phone numbers to generate
 person_id_prefix = "p_"                        # prefix for person id
 loan_application_id_prefix = "la_"             # prefix for loan application id
-loan_application_count = "5000"                # number of loan applications to generate
 device_id_prefix = "dev_"                      # prefix for device id
 device_count = "3000"                          # number of devices to generate
 data_language = "en_US"                        # Change to "zh_CN" for generating Chinese version dataset
@@ -37,6 +36,7 @@ corporation_count = "9500"                     # number of corporations to gener
 chance_of_corporation_risky_percentage = "1.3" # "1.3" means 1.3% of chance for a corporation being risky
 chance_of_application_rejected = "0.01"        # "1" mmeas 1% of chance for a loan application being rejected
 chance_of_applicant_risky_percentage = "2.3"   # "2.3" means 1.3% of chance for a applicant being risky
+applicant_id_prefix = "a_"                     # prefix for applicant id, note, it comes with same numerical part as person id
 ##############################################################################
 ## This defines how edges are breaking down into different patterns         ##
 ##############################################################################
@@ -44,5 +44,4 @@ relation_via_phone_num_ratio = "0.2"           # (:p)-[:with_phone_num]->(:phone
 relation_via_device_ratio = "0.45"             # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
 relation_shared_employer_ratio = "0.1"         # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
 relation_via_employer_phone_num_ratio = "0.05" # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
-# is_related_to_ratio = 1 - sum(<above-all>)   # (:p)-[:is_related_to]->(:p)
-##############################################################################
+# is_related_to_ratio = 1 - sum(<above-all>)   # (:applicant)-[:is_related_to]->(:p)

@@ -97,7 +97,9 @@ data
 │   ├── deg.dat      # vertex degree
 │   └── edge.dat     # edges(which construct the community)
 ├── applicant_application_relationship.csv
-│                    # app vertex and person-applied-> app edge
+│                    # app vertex and applicant-applied-> app edge
+│                    # (loan_applicant:appliant) -[:is_related_to]->(contact:person)
+│                    # (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
 ├── corporation.csv  # corporation vertex
 ├── device.csv       # device vertex
 ├── is_relative_relationship.csv
