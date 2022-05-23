@@ -43,6 +43,7 @@ class FraudDetectionDataGenerator:
         self.faker = Faker(self.conf["data_language"])
         self.person_count = int(self.conf["n"])
         self.person_id_prefix = self.conf["person_id_prefix"]
+        self.applicant_id_prefix = self.conf["applicant_id_prefix"]
         self.abcd_edge_path = self.conf["networkfile"]
         self.abcd_data_dir = os.path.dirname(self.abcd_edge_path)
         self.phone_number_count = int(self.conf["phone_number_count"])
@@ -50,7 +51,6 @@ class FraudDetectionDataGenerator:
         self.device_id_prefix = self.conf["device_id_prefix"]
         self.device_count = int(self.conf["device_count"])
         self.corporation_count = int(self.conf["corporation_count"])
-        self.loan_application_count = int(self.conf["loan_application_count"])
         self.corporation_id_prefix = self.conf["corporation_id_prefix"]
         Path("data").mkdir(parents=True, exist_ok=True)
 
@@ -186,13 +186,15 @@ class FraudDetectionDataGenerator:
 
     def loan_applicant_and_application_generator(self):
         """
-        (src:loan_applicant:person) -[:applied_for_loan]->(app:loan_application)
+        MATCH Pattern:
+        (loan_applicant:appliant) -[:is_related_to]->(contact:person)
+        (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
+        appliant_id comes from "is_related_to" records
         """
-        appliant_id = f"{self.person_id_prefix}{self.faker.random_number() % self.person_count + 1}"
         appliant = self.loan_applicant_generator()
         application = self.loan_application_generator()
         start_date = application[1]
-        return (appliant_id, ) + appliant + application + (start_date, )
+        return appliant + application + (start_date, )
 
     def shared_phone_number_relationship_generator(self):
         """
@@ -496,8 +498,8 @@ class FraudDetectionDataGenerator:
             (edges[start_index:end_index].reset_index(drop=True),
              is_relative_rels),
             axis=1)
-        # header "src_person_id, dst_person_id, degree"
-        header = ["src_id", "dst_id", "degree"]
+        # header "person_id, dst_person_id, degree"
+        header = ["person_id", "contact_id", "degree"]
         _path = "data/is_relative_relationship.csv"
         concat_is_relative_rels.to_csv(_path,
                                        sep=",",
@@ -507,12 +509,21 @@ class FraudDetectionDataGenerator:
         log(f"Generating shared relationship ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
 
     def generate_applicants_and_applications(self):
-        # (src:loan_applicant:person) -[:applied_for_loan]->(app:loan_application)
-        _ = "(src:loan_applicant:person) -[:applied_for_loan]->(app:loan_application)"
+        _ = """
+        (loan_applicant:appliant) -[:is_related_to]->(contact:person)
+        (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
+        """
         log("Generating loan application relationship in pattern:")
         console.print(Syntax(_, "cypher", line_numbers=False))
+
+        is_relative_rels = pd.read_csv("data/is_relative_relationship.csv",
+                                       delimiter=",")
+
+        # loan_application_count is the row count of is_relative_rels
+        loan_application_count = is_relative_rels.shape[0]
+
         header = [
-            "loan_application_id", "person_id", "address", "degree",
+            "loan_application_id", "address", "degree",
             "occupation", "salary", "is_risky", "risk_profile",
             "apply_agent_id", "apply_date", "application_id",
             "approval_status", "application_type", "rejection_reason",
@@ -520,19 +531,34 @@ class FraudDetectionDataGenerator:
         ]
         _path = "data/_applicant_application_relationship.csv"
         self.csv_writer(_path,
-                        self.loan_application_count,
+                        loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
                         index_prefix=self.conf["loan_application_id_prefix"],
                         header=header)
         applicant_application = pd.read_csv("data/_applicant_application_relationship.csv",
                                        delimiter=",")
+
+        # concat applicant_application and is_relative_rels
+        concat_is_relative_rels = pd.concat(
+            (applicant_application.reset_index(drop=True),
+             is_relative_rels),
+            axis=1)
+
         person = pd.read_csv("data/person.csv", delimiter=",")
-        final_result = pd.merge(applicant_application, person, on="person_id")
-        final_result.to_csv("data/applicant_application_relationship.csv",
+        merge_person_cols = pd.merge(concat_is_relative_rels, person, on="person_id")
+        # transform src_person_id to src_applicant_id
+        merge_person_cols.rename(columns = {"person_id": "applicant_id"}, inplace = True)
+        if self.person_id_prefix != self.applicant_id_prefix:
+            merge_person_cols["applicant_id"] = merge_person_cols[
+                "applicant_id"].str.replace(self.person_id_prefix,
+                                            self.applicant_id_prefix)
+
+        os.remove(_path)
+        _path = "data/applicant_application_relationship.csv"
+        merge_person_cols.to_csv(_path,
                             sep=",",
                             index=False)
-        os.remove("data/_applicant_application_relationship.csv")
 
         log(f"Generating loan application relationship ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
 
@@ -545,7 +571,9 @@ data
 │   ├── deg.dat      # vertex degree
 │   └── edge.dat     # edges(which construct the community)
 ├── applicant_application_relationship.csv
-│                    # app vertex and person-applied-> app edge
+│                    # app vertex and applicant-applied-> app edge
+│                    # (loan_applicant:appliant) -[:is_related_to]->(contact:person)
+│                    # (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
 ├── corporation.csv  # corporation vertex
 ├── device.csv       # device vertex
 ├── is_relative_relationship.csv
