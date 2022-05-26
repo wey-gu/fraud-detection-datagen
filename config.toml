@@ -45,3 +45,8 @@ relation_via_device_ratio = "0.45"             # (:p)-[:used_dev]->(:dev)<-[:use
 relation_shared_employer_ratio = "0.1"         # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
 relation_via_employer_phone_num_ratio = "0.05" # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
 # is_related_to_ratio = 1 - sum(<above-all>)   # (:applicant)-[:is_related_to]->(:p)
+##############################################################################
+## Computation                                                              ##
+##############################################################################
+process_count = "8"                 # number of processes to run in parallel
+##############################################################################
