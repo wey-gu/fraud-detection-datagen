@@ -29,10 +29,10 @@ https://user-images.githubusercontent.com/1651790/168299297-83b232a1-23b4-44e0-b
 tags(vertex label)
 
 - contact
-  - properties: name, gender, birthday,
+  - properties: name, gender, birthday
 - device
 - loan_applicant
-  - properties: address, degree, occupation, salary, is_risky, risk_profile
+  - properties: address, degree, occupation, salary, is_risky, risk_profile, name, gender, birthday
 - loan_application
   - properties: apply_agent_id, apply_date, application_id, approval_status, application_type, rejection_reason
 - phone_number
@@ -96,10 +96,25 @@ data
 │   ├── cs.dat       # community size
 │   ├── deg.dat      # vertex degree
 │   └── edge.dat     # edges(which construct the community)
-├── applicant_application_relationship.csv
-│                    # app vertex and applicant-applied-> app edge
-│                    # (loan_applicant:appliant) -[:is_related_to]->(contact:person)
-│                    # (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
+├── applicant_application_with_is_related_to.csv
+│                    # (loan_applicant:appliant)-[:is_related_to]->(contact:person)
+│                    # (loan_applicant:appliant)-[:applied_for_loan]->(app:loan_application)
+├── applicant_application_with_shared_device.csv
+│                    # (loan_applicant_0:appliant)-[:used_dev]->(:dev)<-[:used_dev]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── applicant_application_with_shared_phone_num.csv
+│                    # (loan_applicant_0:appliant)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── applicant_application_with_shared_employer.csv
+│                    # (loan_applicant_0:appliant)-[:worked_for]->(:corp)<-[:worked_for]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── applicant_application_connected_with_employer_and_phone_num.csv
+│                    # (loan_applicant_0:appliant)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
 ├── corporation.csv  # corporation vertex
 ├── device.csv       # device vertex
 ├── is_relative_relationship.csv

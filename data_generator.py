@@ -1,12 +1,11 @@
 import csv
 import os
 import re
-import julia
 import toml
 
 from collections import OrderedDict
 from faker import Faker
-from julia import Main
+from multiprocessing import Pool
 from rich.console import Console
 from rich.table import Table
 from rich.progress import Progress
@@ -20,17 +19,64 @@ CONF_PATH = "config.toml"
 ABCD_SAMPLER_PATH = "abcd_sampler.jl"
 WRITE_BATCH = 1000
 
-
 console = Console()
+
 
 def log(message):
     console.print("\n[bold bright_cyan][ Info:[/bold bright_cyan]", message)
 
-def title(title, description):
+
+def title(title, description=None):
     table = Table(show_header=True)
     table.add_column(title, style="dim", width=96)
-    table.add_row(description)
+    if description:
+        table.add_row(description)
     console.print("\n", table)
+
+
+OUTPUT_EXPLANATION = """
+$ tree
+data
+├── abcd             # raw data with ABCD Sampler, reference only
+│   ├── com.dat      # vertex -> community
+│   ├── cs.dat       # community size
+│   ├── deg.dat      # vertex degree
+│   └── edge.dat     # edges(which construct the community)
+├── applicant_application_with_is_related_to.csv
+│                    # (loan_applicant:appliant)-[:is_related_to]->(contact:person)
+│                    # (loan_applicant:appliant)-[:applied_for_loan]->(app:loan_application)
+├── applicant_application_with_shared_device.csv
+│                    # (loan_applicant_0:appliant)-[:used_dev]->(:dev)<-[:used_dev]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── applicant_application_with_shared_phone_num.csv
+│                    # (loan_applicant_0:appliant)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── applicant_application_with_shared_employer.csv
+│                    # (loan_applicant_0:appliant)-[:worked_for]->(:corp)<-[:worked_for]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── applicant_application_connected_with_employer_and_phone_num.csv
+│                    # (loan_applicant_0:appliant)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(loan_applicant_1:appliant)
+│                    # (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+│                    # (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+├── corporation.csv  # corporation vertex
+├── device.csv       # device vertex
+├── is_relative_relationship.csv
+│                    # is_relative (:p)-[:is_related_to]->(:p)
+├── person.csv       # contact vertex
+├── phone_number.csv # phone number vertex
+├── shared_device_relationship.csv
+│                    # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
+├── shared_employer_relationship.csv
+│                    # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
+├── shared_phone_num_relationship.csv
+│                    # (:p)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
+└── shared_via_employer_phone_num_relationship.csv
+    # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
+"""
+
 
 class FraudDetectionDataGenerator:
     """
@@ -52,19 +98,30 @@ class FraudDetectionDataGenerator:
         self.device_count = int(self.conf["device_count"])
         self.corporation_count = int(self.conf["corporation_count"])
         self.corporation_id_prefix = self.conf["corporation_id_prefix"]
+        self.process_count = int(self.conf["process_count"])
         Path("data").mkdir(parents=True, exist_ok=True)
 
     def get_conf(self):
         with open(self.conf_path) as conf_file:
             conf = conf_file.read()
-            toml_highlight = Syntax(conf, "toml", theme="monokai", line_numbers=False)
-            title("Getting [bold magenta]config.toml[/bold magenta] parsed", toml_highlight)
             return toml.loads(conf)
+
+    def print_conf(self):
+        with open(self.conf_path) as conf_file:
+            conf = conf_file.read()
+            toml_highlight = Syntax(conf,
+                                    "toml",
+                                    theme="monokai",
+                                    line_numbers=False)
+            title("Getting [bold magenta]config.toml[/bold magenta] parsed",
+                  toml_highlight)
 
     def init_julia(self):
         """
         Initialize Julia environment
         """
+        import julia
+
         julia.install()
         return julia.Julia()
 
@@ -74,12 +131,16 @@ class FraudDetectionDataGenerator:
 
         data_path: path to data
         """
+        from julia import Main
+
         # Create data directory if not exists
         Path(data_path).mkdir(parents=True, exist_ok=True)
         # Run ABCD sample to generate Relationship data with community structure
-        log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta] to generate community structured data...")
+        log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta] to generate community structured data..."
+            )
         Main.include(ABCD_SAMPLER_PATH)
-        log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta]...[green]✓[/green]. Data generated at [bold magenta]{self.abcd_data_dir}[/bold magenta]")
+        log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta]...[green]✓[/green]. Data generated at [bold magenta]{self.abcd_data_dir}[/bold magenta]"
+            )
 
     @staticmethod
     def csv_writer(file_path,
@@ -87,7 +148,8 @@ class FraudDetectionDataGenerator:
                    row_generator,
                    index=False,
                    index_prefix="",
-                   header=None):
+                   header=None,
+                   init_index=1):
         """
         Write rows to csv file.
 
@@ -100,7 +162,7 @@ class FraudDetectionDataGenerator:
         """
         with open(file_path, mode="w") as file:
             if index:
-                cursor = 1
+                cursor = int(init_index)
             writer = csv.writer(file,
                                 delimiter=",",
                                 quotechar="'",
@@ -150,7 +212,8 @@ class FraudDetectionDataGenerator:
             self.conf["chance_of_corporation_risky_percentage"]))
         risk_profile = "NA" if not is_risky else self.faker.sentence()
         return (re.escape(self.faker.company().replace(", ", "_")),
-                re.escape(self.faker.address().replace("\n", " ").replace(",", " ")),
+                re.escape(self.faker.address().replace("\n",
+                                                       " ").replace(",", " ")),
                 is_risky, risk_profile)
 
     def loan_applicant_generator(self):
@@ -160,14 +223,16 @@ class FraudDetectionDataGenerator:
         is_risky = self.faker.boolean(chance_of_getting_true=float(
             self.conf["chance_of_applicant_risky_percentage"]))
         risk_profile = "NA" if not is_risky else self.faker.sentence()
-        return (re.escape(self.faker.address().replace("\n", " ").replace(",", " ")),
+        return (re.escape(self.faker.address().replace("\n",
+                                                       " ").replace(",", " ")),
                 self.faker.random_element(
-                    elements=["Bachelor", "Master", "PhD"]), re.escape(self.faker.job().replace(",", " ")),
+                    elements=["Bachelor", "Master", "PhD"]),
+                re.escape(self.faker.job().replace(",", " ")),
                 self.faker.random_number(digits=6), is_risky, risk_profile)
 
     def loan_application_generator(self):
         """
-        properties: (apply_agent_id, apply_date, application_id, approval_status, application_type, rejection_reason)
+        properties: (apply_agent_id, apply_date, application_uuid, approval_status, application_type, rejection_reason)
         """
         chance_of_application_rejected = float(
             self.conf["chance_of_application_rejected"])
@@ -187,9 +252,8 @@ class FraudDetectionDataGenerator:
     def loan_applicant_and_application_generator(self):
         """
         MATCH Pattern:
-        (loan_applicant:appliant) -[:is_related_to]->(contact:person)
-        (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
-        appliant_id comes from "is_related_to" records
+        (loan_applicant:appliant)-[:applied_for_loan]->(app:loan_application)
+        appliant_id comes from "p_*" records
         """
         appliant = self.loan_applicant_generator()
         application = self.loan_application_generator()
@@ -274,7 +338,8 @@ class FraudDetectionDataGenerator:
                         index=True,
                         index_prefix=self.person_id_prefix,
                         header=header)
-        log(f"Generating contacts...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]")
+        log(f"Generating contacts...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]"
+            )
 
     def generate_phones_numbers(self):
         """
@@ -289,7 +354,8 @@ class FraudDetectionDataGenerator:
                         index=True,
                         index_prefix=self.phone_number_id_prefix,
                         header=header)
-        log(f"Generating phones numbers...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]")
+        log(f"Generating phones numbers...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]"
+            )
 
     def generate_devices(self):
         """
@@ -304,7 +370,8 @@ class FraudDetectionDataGenerator:
                         index=True,
                         index_prefix=self.device_id_prefix,
                         header=header)
-        log(f"Generating devices...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]")
+        log(f"Generating devices...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]"
+            )
 
     def generate_corporations(self):
         """
@@ -321,7 +388,8 @@ class FraudDetectionDataGenerator:
                         index=True,
                         index_prefix=self.corporation_id_prefix,
                         header=header)
-        log(f"Generating corporations...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]")
+        log(f"Generating corporations...[green]✓[/green]. Data generated at: [bold green]{path}[/bold green]"
+            )
 
     def generate_clusterred_contacts_relations(self):
         """
@@ -351,9 +419,7 @@ class FraudDetectionDataGenerator:
         # (src:person)-[:with_phone_num]->(pn:phone_number)<-[:with_phone_num]-(dst:person)
         _ = "(src:person)-[:with_phone_num]->(pn:phone_number)<-[:with_phone_num]-(dst:person)"
         log("Generating shared phone number relationships in pattern:")
-        title(
-            "shared a phone number",
-            Syntax(_, "cypher", line_numbers=False))
+        title("shared a phone number", Syntax(_, "cypher", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_phone_num_relationship.csv",
                         shared_phone_num_count,
@@ -375,14 +441,13 @@ class FraudDetectionDataGenerator:
                                       index=False,
                                       header=header)
         os.remove("data/_shared_phone_num_relationship.csv")
-        log(f"Generating shared phone number relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
+        log(f"Generating shared phone number relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
 
         # (src:person)-[:used_device]->(d:device)<-[:used_device]-(dst:person)
         _ = "(src:person)-[:used_device]->(d:device)<-[:used_device]-(dst:person)"
         log("Generating shared device relationships in pattern:")
-        title(
-            "shared a device",
-            Syntax(_, "cypher", line_numbers=False))
+        title("shared a device", Syntax(_, "cypher", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_device_relationship.csv",
                         shared_device_count,
@@ -407,14 +472,13 @@ class FraudDetectionDataGenerator:
                                          index=False,
                                          header=header)
         os.remove("data/_shared_device_relationship.csv")
-        log(f"Generating shared device relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
+        log(f"Generating shared device relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
 
         # (src:person)-[:worked_for]->(corp:corporation)<-[:worked_for]-(dst:person)
         _ = "(src:person)-[:worked_for]->(corp:corporation)<-[:worked_for]-(dst:person)"
         log("Generating shared employer relationships in pattern:")
-        title(
-            "shared employer",
-            (Syntax(_, "cypher", line_numbers=False)))
+        title("shared employer", (Syntax(_, "cypher", line_numbers=False)))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_employer_relationship.csv",
                         shared_employer_count,
@@ -436,20 +500,20 @@ class FraudDetectionDataGenerator:
             "dst_work_for_start_time"
         ]
         _path = "data/shared_employer_relationship.csv"
-        concat_shared_employer_rels.to_csv(
-            _path,
-            sep=",",
-            index=False,
-            header=header)
+        concat_shared_employer_rels.to_csv(_path,
+                                           sep=",",
+                                           index=False,
+                                           header=header)
         os.remove("data/_shared_employer_relationship.csv")
-        log(f"Generating shared employer relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
+        log(f"Generating shared employer relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
 
         # (src:person) -[:worked_for]->(corp:corporation)->(pn:phone_number)<-[:with_phone_num]-(dst:person)
         _ = "(src:person) -[:worked_for]->(corp:corporation)->(pn:phone_number)<-[:with_phone_num]-(dst:person)"
-        log("Generating shared phone number and employer relationships in pattern:")
-        title(
-            "shared phone number and employer",
-            Syntax(_, "cypher", line_numbers=False))
+        log("Generating shared phone number and employer relationships in pattern:"
+            )
+        title("shared phone number and employer",
+              Syntax(_, "cypher", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_shared_via_employer_phone_num_relationship.csv",
                         shared_via_employer_phone_num_count,
@@ -470,20 +534,18 @@ class FraudDetectionDataGenerator:
             "src_id", "dst_id", "corp_id", "pn_id", "src_work_for_start_time"
         ]
         _path = "data/shared_via_employer_phone_num_relationship.csv"
-        concat_shared_via_employer_phone_num_rels.to_csv(
-            _path,
-            sep=",",
-            index=False,
-            header=header)
+        concat_shared_via_employer_phone_num_rels.to_csv(_path,
+                                                         sep=",",
+                                                         index=False,
+                                                         header=header)
         os.remove("data/_shared_via_employer_phone_num_relationship.csv")
-        log(f"Generating shared phone number and employer relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
+        log(f"Generating shared phone number and employer relationships ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
 
         # (src:person) -[:is_related_to]->(dst:person)
         _ = "(src:person) -[:is_related_to]->(dst:person)"
         log("Generating shared relationship in pattern:")
-        title(
-            "is related to",
-            Syntax(_, "cypher", line_numbers=False))
+        title("is related to", Syntax(_, "cypher", line_numbers=False))
         # write intermediate data to be column_stacked to the final csv file
         self.csv_writer("data/_is_relative_relationship.csv",
                         is_relative_count,
@@ -506,14 +568,16 @@ class FraudDetectionDataGenerator:
                                        index=False,
                                        header=header)
         os.remove("data/_is_relative_relationship.csv")
-        log(f"Generating shared relationship ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
+        log(f"Generating shared relationship ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
 
-    def generate_applicants_and_applications(self):
+    def generate_applicants_and_applications_with_is_related_to(self):
         _ = """
+        // is related to
         (loan_applicant:appliant) -[:is_related_to]->(contact:person)
         (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
         """
-        log("Generating loan application relationship in pattern:")
+        log("Generating loan application with is_related_to in pattern:")
         console.print(Syntax(_, "cypher", line_numbers=False))
 
         is_relative_rels = pd.read_csv("data/is_relative_relationship.csv",
@@ -523,97 +587,295 @@ class FraudDetectionDataGenerator:
         loan_application_count = is_relative_rels.shape[0]
 
         header = [
-            "loan_application_id", "address", "degree",
-            "occupation", "salary", "is_risky", "risk_profile",
-            "apply_agent_id", "apply_date", "application_id",
-            "approval_status", "application_type", "rejection_reason",
-            "applied_for_loan_start_time"
+            "loan_application_id", "address", "degree", "occupation", "salary",
+            "is_risky", "risk_profile", "apply_agent_id", "apply_date",
+            "application_uuid", "approval_status", "application_type",
+            "rejection_reason", "applied_for_loan_start_time"
         ]
-        _path = "data/_applicant_application_relationship.csv"
+        _path = "data/_applicant_application_with_is_related_to.csv"
         self.csv_writer(_path,
                         loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
-                        index_prefix=self.conf["loan_application_id_prefix"],
+                        index_prefix=self.conf["loan_application_id_prefix"] +
+                        "r_",
                         header=header)
-        applicant_application = pd.read_csv("data/_applicant_application_relationship.csv",
-                                       delimiter=",")
+        applicant_application = pd.read_csv(
+            "data/_applicant_application_with_is_related_to.csv",
+            delimiter=",")
 
         # concat applicant_application and is_relative_rels
         concat_is_relative_rels = pd.concat(
-            (applicant_application.reset_index(drop=True),
-             is_relative_rels),
+            (applicant_application.reset_index(drop=True), is_relative_rels),
             axis=1)
 
         person = pd.read_csv("data/person.csv", delimiter=",")
-        merge_person_cols = pd.merge(concat_is_relative_rels, person, on="person_id")
+        merge_person_cols = pd.merge(concat_is_relative_rels,
+                                     person,
+                                     on="person_id")
         # transform src_person_id to src_applicant_id
-        merge_person_cols.rename(columns = {"person_id": "applicant_id"}, inplace = True)
+        merge_person_cols.rename(columns={"person_id": "applicant_id"},
+                                 inplace=True)
         if self.person_id_prefix != self.applicant_id_prefix:
             merge_person_cols["applicant_id"] = merge_person_cols[
                 "applicant_id"].str.replace(self.person_id_prefix,
                                             self.applicant_id_prefix)
 
         os.remove(_path)
-        _path = "data/applicant_application_relationship.csv"
-        merge_person_cols.to_csv(_path,
-                            sep=",",
-                            index=False)
+        _path = "data/applicant_application_with_is_related_to.csv"
+        merge_person_cols.to_csv(_path, sep=",", index=False)
 
-        log(f"Generating loan application relationship ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]")
+        log(f"Generating loan application with is_related_to ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
 
-OUTPUT_EXPLANATION = """
-$ tree
-data
-├── abcd             # raw data with ABCD Sampler, reference only
-│   ├── com.dat      # vertex -> community
-│   ├── cs.dat       # community size
-│   ├── deg.dat      # vertex degree
-│   └── edge.dat     # edges(which construct the community)
-├── applicant_application_relationship.csv
-│                    # app vertex and applicant-applied-> app edge
-│                    # (loan_applicant:appliant) -[:is_related_to]->(contact:person)
-│                    # (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
-├── corporation.csv  # corporation vertex
-├── device.csv       # device vertex
-├── is_relative_relationship.csv
-│                    # is_relative (:p)-[:is_related_to]->(:p)
-├── person.csv       # contact vertex
-├── phone_number.csv # phone number vertex
-├── shared_device_relationship.csv
-│                    # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
-├── shared_employer_relationship.csv
-│                    # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
-├── shared_phone_num_relationship.csv
-│                    # (:p)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
-└── shared_via_employer_phone_num_relationship.csv
-    # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
-"""
+    def generate_applicants_and_applications_two_peers(self, pattern_str,
+                                                       pattern_name):
+        _ = pattern_str
+        log(f"Generating loan application with {pattern_name} in pattern:")
+        console.print(Syntax(_, "cypher", line_numbers=False))
+
+        relations = pd.read_csv(f"data/{pattern_name}_relationship.csv",
+                                delimiter=",")
+
+        # loan_application_count is the row count of relations
+        loan_application_count = relations.shape[0]
+
+        header = [
+            "loan_application_id", "address", "degree", "occupation", "salary",
+            "is_risky", "risk_profile", "apply_agent_id", "apply_date",
+            "application_uuid", "approval_status", "application_type",
+            "rejection_reason", "applied_for_loan_start_time"
+        ]
+        header_0 = [h + "_0" for h in header]
+        header_1 = [h + "_1" for h in header]
+        _path_0 = f"data/_applicant_application_with_{pattern_name}_0.csv"
+        _path_1 = f"data/_applicant_application_with_{pattern_name}_1.csv"
+        self.csv_writer(_path_0,
+                        loan_application_count,
+                        self.loan_applicant_and_application_generator,
+                        index=True,
+                        index_prefix=self.conf["loan_application_id_prefix"] +
+                        pattern_name[7] + "_",
+                        header=header_0)
+        self.csv_writer(_path_1,
+                        loan_application_count,
+                        self.loan_applicant_and_application_generator,
+                        index=True,
+                        index_prefix=self.conf["loan_application_id_prefix"] +
+                        pattern_name[7] + "_",
+                        header=header_1,
+                        init_index=loan_application_count + 1)
+        applicant_application_0 = pd.read_csv(
+            f"data/_applicant_application_with_{pattern_name}_0.csv",
+            delimiter=",")
+        applicant_application_1 = pd.read_csv(
+            f"data/_applicant_application_with_{pattern_name}_1.csv",
+            delimiter=",")
+
+        # concat applicant_application_0 and relations
+        concat_relations_0 = pd.concat(
+            (applicant_application_0.reset_index(drop=True), relations),
+            axis=1)
+        # concat applicant_application_1 and applicant_application_0
+        concat_relations = pd.concat(
+            (applicant_application_1.reset_index(drop=True),
+             concat_relations_0),
+            axis=1)
+
+        person = pd.read_csv("data/person.csv", delimiter=",")
+        person.rename(columns={
+            "person_id": "src_id",
+            "name": "name_0",
+            "gender": "gender_0",
+            "birthday": "birthday_0"
+        },
+                      inplace=True)
+        merge_person_cols_0 = pd.merge(concat_relations, person, on="src_id")
+        # transform src_person_id to applicant_id_0
+        merge_person_cols_0.rename(columns={"src_id": "applicant_id_0"},
+                                   inplace=True)
+
+        person.rename(columns={
+            "src_id": "dst_id",
+            "name_0": "name_1",
+            "gender_0": "gender_1",
+            "birthday_0": "birthday_1"
+        },
+                      inplace=True)
+        merge_person_cols_1 = pd.merge(merge_person_cols_0,
+                                       person,
+                                       on="dst_id")
+        # transform src_person_id to applicant_id_0
+        merge_person_cols_1.rename(columns={"dst_id": "applicant_id_1"},
+                                   inplace=True)
+        if self.person_id_prefix != self.applicant_id_prefix:
+            merge_person_cols_1["applicant_id_0"] = merge_person_cols_1[
+                "applicant_id_0"].str.replace(self.person_id_prefix,
+                                              self.applicant_id_prefix)
+            merge_person_cols_1["applicant_id_1"] = merge_person_cols_1[
+                "applicant_id_1"].str.replace(self.person_id_prefix,
+                                              self.applicant_id_prefix)
+
+        os.remove(_path_0)
+        os.remove(_path_1)
+        _path = f"data/applicant_application_with_{pattern_name}.csv"
+        merge_person_cols_1.to_csv(_path, sep=",", index=False)
+
+        log(f"Generating loan application with {pattern_name} ...[green]✓[/green]. Data generated at: [bold green]{_path}[/bold green]"
+            )
+
+    def generate_applicants_and_applications_with_shared_device(self):
+        _ = """
+        (loan_applicant_0:appliant)-[:used_dev]->(:dev)<-[:used_dev]-(loan_applicant_1:appliant)
+        (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+        (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+        """
+        pattern_name = "shared_device"
+        self.generate_applicants_and_applications_two_peers(_, pattern_name)
+
+    def generate_applicants_and_applications_with_shared_phone(self):
+        _ = """
+        (loan_applicant_0:appliant)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(loan_applicant_1:appliant)
+        (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+        (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+        """
+        pattern_name = "shared_phone_num"
+        self.generate_applicants_and_applications_two_peers(_, pattern_name)
+
+    def generate_applicants_and_applications_with_shared_employer(self):
+        _ = """
+        (loan_applicant_0:appliant)-[:worked_for]->(:corp)<-[:worked_for]-(loan_applicant_1:appliant)
+        (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+        (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+        """
+        pattern_name = "shared_employer"
+        self.generate_applicants_and_applications_two_peers(_, pattern_name)
+
+    def generate_applicants_and_applications_via_employer_phone_num(self):
+        _ = """
+        (loan_applicant_0:appliant)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(loan_applicant_1:appliant)
+        (loan_applicant_0:appliant)-[:applied_for_loan]->(app_0:loan_application)
+        (loan_applicant_1:appliant)-[:applied_for_loan]->(app_1:loan_application)
+        """
+        pattern_name = "shared_via_employer_phone_num"
+        self.generate_applicants_and_applications_two_peers(_, pattern_name)
+
+
+def gen_person(step):
+    gen = FraudDetectionDataGenerator()
+    gen.print_conf()
+    title(f"[bold blue][ Step {step} ] [/bold blue]",
+          "Generate contacts(person) as vertices")
+    gen.generate_contacts()
+
+
+def gen_homogeneous_rel_with_community(step):
+    gen = FraudDetectionDataGenerator()
+    title(
+        f"[bold blue][ Step {step} ] [/bold blue]",
+        "Run ABCD sample to generate relationship data with community structure"
+    )
+    gen.init_julia()
+    gen.run_abcd_sample(gen.abcd_data_dir)
+
+
+def break_homogeneous_rel_into_heterogeneous_graph_with_community(step):
+    gen = FraudDetectionDataGenerator()
+    title(f"[bold blue][ Step {step} ] [/bold blue]",
+          "Distribute relationships to different patterns")
+    gen.generate_clusterred_contacts_relations()
+
+
+def generate_applicants_and_applications_with_is_related_to(step):
+    gen = FraudDetectionDataGenerator()
+    title(f"[bold blue][ Step {step} ] [/bold blue]")
+    gen.generate_applicants_and_applications_with_is_related_to()
+
+
+def generate_applicants_and_applications_with_shared_device(step):
+    gen = FraudDetectionDataGenerator()
+    title(f"[bold blue][ Step {step} ] [/bold blue]")
+    gen.generate_applicants_and_applications_with_shared_device()
+
+
+def generate_applicants_and_applications_with_shared_phone(step):
+    gen = FraudDetectionDataGenerator()
+    title(f"[bold blue][ Step {step} ] [/bold blue]")
+    gen.generate_applicants_and_applications_with_shared_phone()
+
+
+def generate_applicants_and_applications_with_shared_employer(step):
+    gen = FraudDetectionDataGenerator()
+    title(f"[bold blue][ Step {step} ] [/bold blue]")
+    gen.generate_applicants_and_applications_with_shared_employer()
+
+
+def generate_applicants_and_applications_via_employer_phone_num(step):
+    gen = FraudDetectionDataGenerator()
+    title(f"[bold blue][ Step {step} ] [/bold blue]")
+    gen.generate_applicants_and_applications_via_employer_phone_num()
+
 
 if __name__ == "__main__":
 
     with Progress() as progress:
-
         task = progress.add_task("[cyan]Progress:", total=5)
 
         gen = FraudDetectionDataGenerator()
-        title("[bold blue][ Step 0 ] [/bold blue]", "Generate contacts(person) as vertices")
-        progress.advance(task)
-        gen.generate_contacts()
-        title("[bold blue][ Step 1 ] [/bold blue]", "Run ABCD sample to generate relationship data with community structure")
+        with Pool(processes=gen.process_count) as pool:
 
-        progress.advance(task)
-        gen.init_julia()
-        gen.run_abcd_sample(gen.abcd_data_dir)
-        progress.advance(task)
+            title(
+                "[bold blue][ Init ] [/bold blue]",
+                f"Will be running with maximum {gen.process_count} processes")
 
-        title("[bold blue][ Step 2 ] [/bold blue]", "Distribute relationships to different patterns")
-        gen.generate_clusterred_contacts_relations()
-        progress.advance(task)
+            step_0 = pool.map_async(gen_person, (0, ))
+            progress.advance(task)
 
-        title("[bold blue][ Step 3 ] [/bold blue]", "Generate applicant and applications")
-        gen.generate_applicants_and_applications()
+            # step 1 which calls PyJulia to be run in main process
+            gen_homogeneous_rel_with_community(1)
+            progress.advance(task)
+            step_2 = pool.map_async(
+                break_homogeneous_rel_into_heterogeneous_graph_with_community,
+                (2, ))
+            step_0.wait()
+            progress.advance(task)
+            step_2.wait()
+            progress.advance(task)
 
-        tree = Syntax(OUTPUT_EXPLANATION, "bash", theme="monokai", line_numbers=False)
+            title(f"[bold blue][ Step 3 ] [/bold blue]",
+                  "Generate applicant and applications")
+            step_3 = []
+            step_3.append(
+                pool.map_async(
+                    generate_applicants_and_applications_with_is_related_to,
+                    (3.0, )))
+
+            step_3.append(
+                pool.map_async(
+                    generate_applicants_and_applications_with_shared_device,
+                    (3.1, )))
+
+            step_3.append(
+                pool.map_async(
+                    generate_applicants_and_applications_with_shared_phone,
+                    (3.2, )))
+
+            step_3.append(
+                pool.map_async(
+                    generate_applicants_and_applications_with_shared_employer,
+                    (3.3, )))
+
+            step_3.append(
+                pool.map_async(
+                    generate_applicants_and_applications_via_employer_phone_num,
+                    (3.4, )))
+
+            for step in step_3:
+                step.wait()
+
+        tree = Syntax(OUTPUT_EXPLANATION,
+                      "bash",
+                      theme="monokai",
+                      line_numbers=False)
         title("[bold blue][ Generated Files ] [/bold blue]", tree)
         progress.advance(task)
