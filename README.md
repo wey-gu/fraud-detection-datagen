@@ -1,6 +1,23 @@
 ## How to use the data
 
-TBD, import the sample data or generate your own with this project to Nebula Graph with nebula-importer.
+First to bootstrap your Nebula Graph cluster, here, for single server playground, try with [nebula-up](https://github.com/wey-gu/nebula-up/).
+
+Then, assuming you have a Nebula Graph cluster running in docker with network namespace: `nebula-net`, you can use the following command call Nebula Graph Importer to import data into Nebula Graph, with its configuration from `nebula_graph_importer.yaml`:
+
+```bash
+# If we are using the sample data:
+# mv data_sample data
+
+# only do this for once, remove header line from data/*.csv
+sed -i '1d' data/*.csv
+
+docker run --rm -ti \
+    --network=nebula-net \
+    -v ${PWD}:/root/ \
+    -v ${PWD}/data/:/data \
+    vesoft/nebula-importer:v3.1.0 \
+    --config /root/nebula_graph_importer.yaml
+```
 
 ## How to generate data
 
