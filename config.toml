@@ -2,9 +2,9 @@
 ## ABCDGraphGenerator.jl Configurations                                     ##
 ##############################################################################
 d_min = "2"                   # minimum degree, cannot be 0
-d_max = "6"                   # maximum degree
-c_min = "100"                 # minimum cluster size
-c_max = "1000"                # maximum cluster size
+d_max = "4"                   # maximum degree
+c_min = "50"                  # minimum cluster size
+c_max = "200"                 # maximum cluster size
 c_max_iter = "1000"           # maximum number of iterations for sampling cluster sizes
 n = "100000"                  # number of contact/person vertices in graph
 ##############################################################################
@@ -25,18 +25,18 @@ networkfile = "data/abcd/edge.dat"      # name of file do generate that contains
 ## Data Generator Configurations                                            ##
 ##############################################################################
 phone_number_id_prefix = "pn_"                 # prefix for phone number id
-phone_number_count = "6000"                    # number of phone numbers to generate
+phone_number_count = "90000"                   # number of phone numbers to generate
 person_id_prefix = "p_"                        # prefix for person id
 loan_application_id_prefix = "la_"             # prefix for loan application id
 device_id_prefix = "dev_"                      # prefix for device id
-device_count = "3000"                          # number of devices to generate
+device_count = "80000"                         # number of devices to generate
 data_language = "en_US"                        # Change to "zh_CN" for generating Chinese version dataset
 corporation_id_prefix = "co_"                  # prefix for corporation id
 corporation_count = "9500"                     # number of corporations to generate
 chance_of_corporation_risky_percentage = "1.3" # "1.3" means 1.3% of chance for a corporation being risky
 chance_of_application_rejected = "0.01"        # "1" mmeas 1% of chance for a loan application being rejected
 chance_of_applicant_risky_percentage = "2.3"   # "2.3" means 1.3% of chance for a applicant being risky
-applicant_id_prefix = "a_"                     # prefix for applicant id, note, it comes with same numerical part as person id
+applicant_id_prefix = "p_"                     # prefix for applicant id, note, it comes with same numerical part as person id
 ##############################################################################
 ## This defines how edges are breaking down into different patterns         ##
 ##############################################################################

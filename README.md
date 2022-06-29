@@ -6,7 +6,7 @@ Then, assuming you have a Nebula Graph cluster running in docker with network na
 
 ```bash
 # If we are using the sample data:
-# mv data_sample data
+# cp -r data_sample data
 
 # only do this for once, remove header line from data/*.csv
 sed -i '1d' data/*.csv
