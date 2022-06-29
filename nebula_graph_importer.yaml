@@ -1,0 +1,1312 @@
+version: v2
+description: frauddetection
+removeTempFiles: false
+clientSettings:
+  retry: 3
+  concurrency: 3 # number of graph clients
+  channelBufferSize: 16
+  space: frauddetection
+  connection:
+    user: root
+    password: nebula
+    address: 'graphd:9669,graphd1:9669,graphd2:9669' # change to your nebula graph's graphd address
+  postStart:
+    commands: >
+      CREATE SPACE frauddetection (partition_num = 120, replica_factor = 1, vid_type = FIXED_STRING(32));
+      USE frauddetection;
+      CREATE TAG corp (corp_name string, phone_num string, is_risky string, risk_comment string);
+      CREATE TAG application (apply_agent_id string, apply_date date, application_uuid string, approval_status string, application_type string, rejection_reason string);
+      CREATE TAG phone_num (phone_num string);
+      CREATE TAG device (device_id string);
+      CREATE TAG person (name string);
+      CREATE TAG applicant (name string, gender string, birth date, addr string, degree string, occupation string, year_salary string, is_risky string, risk_comment string);
+      CREATE EDGE applied_for_loan (start_time date); 
+      CREATE EDGE with_phone_num (start_time date);
+      CREATE EDGE is_related_to (start_time date, level int);
+      CREATE EDGE worked_for (start_time date);
+      CREATE EDGE used_device (start_time date);
+    afterPeriod: 20s
+logPath: ./err/test.log
+files:
+  - path: /data/corporation.csv
+    failDataPath: ./err/data/corporation.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: corp
+            props:
+              - name: corp_name
+                type: string
+                index: 1
+              - name: is_risky
+                type: string
+                index: 3
+              - name: risk_comment
+                type: string
+                index: 4
+  - path: /data/applicant_application_with_is_related_to.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 7
+              - name: apply_date
+                type: date
+                index: 8
+              - name: application_uuid
+                type: string
+                index: 9
+              - name: approval_status
+                type: string
+                index: 10
+              - name: application_type
+                type: string
+                index: 11
+              - name: rejection_reason
+                type: string
+                index: 12
+  - path: /data/phone_number.csv
+    failDataPath: ./err/data/phone_number.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: phone_num
+            props:
+              - name: phone_num
+                type: string
+                index: 1
+  - path: /data/device.csv
+    failDataPath: ./err/data/device.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: device
+            props:
+              - name: device_id
+                type: string
+                index: 1
+  - path: /data/person.csv
+    failDataPath: ./err/data/person.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: person
+            props:
+              - name: name
+                type: string
+                index: 1
+  - path: /data/applicant_application_with_is_related_to.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 14
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 17
+              - name: gender
+                type: string
+                index: 18
+              - name: birth
+                type: date
+                index: 19
+              - name: addr
+                type: string
+                index: 1
+              - name: degree
+                type: string
+                index: 2
+              - name: occupation
+                type: string
+                index: 3
+              - name: year_salary
+                type: string
+                index: 4
+              - name: is_risky
+                type: string
+                index: 5
+              - name: risk_comment
+                type: string
+                index: 6
+  - path: /data/applicant_application_with_is_related_to.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 14
+          type: string
+        dstVID:
+          index: 0
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 8
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props: null
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props: null
+  - path: /data/applicant_application_with_is_related_to.csv
+    failDataPath: ./err/data/is_related_to.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: is_related_to
+        withRanking: false
+        srcVID:
+          index: 14
+          type: string
+        dstVID:
+          index: 15
+          type: string
+        props:
+          - name: level
+            type: int
+            index: 16
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/worked_for.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: worked_for
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 31
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/worked_for.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: worked_for
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 31
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/used_device.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: used_device
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 31
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/used_device.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: used_device
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 32
+  - path: /data/shared_phone_num_relationship.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 1
+          type: string
+        dstVID:
+          index: 2
+          type: string
+        props: null
+  - path: /data/shared_via_employer_phone_num_relationship.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 1
+          type: string
+        dstVID:
+          index: 3
+          type: string
+        props: null
+  - path: /data/shared_via_employer_phone_num_relationship.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 2
+          type: string
+        dstVID:
+          index: 3
+          type: string
+        props: null
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/worked_for.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: worked_for
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 30
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 32
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 31
+          type: string
+        props: null
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/with_phone_num.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: with_phone_num
+        withRanking: false
+        srcVID:
+          index: 30
+          type: string
+        dstVID:
+          index: 31
+          type: string
+        props: null
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 7
+              - name: apply_date
+                type: date
+                index: 8
+              - name: application_uuid
+                type: string
+                index: 9
+              - name: approval_status
+                type: string
+                index: 10
+              - name: application_type
+                type: string
+                index: 11
+              - name: rejection_reason
+                type: string
+                index: 12
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 7
+              - name: apply_date
+                type: date
+                index: 8
+              - name: application_uuid
+                type: string
+                index: 9
+              - name: approval_status
+                type: string
+                index: 10
+              - name: application_type
+                type: string
+                index: 11
+              - name: rejection_reason
+                type: string
+                index: 12
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 7
+              - name: apply_date
+                type: date
+                index: 8
+              - name: application_uuid
+                type: string
+                index: 9
+              - name: approval_status
+                type: string
+                index: 10
+              - name: application_type
+                type: string
+                index: 11
+              - name: rejection_reason
+                type: string
+                index: 12
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 0
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 7
+              - name: apply_date
+                type: date
+                index: 8
+              - name: application_uuid
+                type: string
+                index: 9
+              - name: approval_status
+                type: string
+                index: 10
+              - name: application_type
+                type: string
+                index: 11
+              - name: rejection_reason
+                type: string
+                index: 12
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 14
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 21
+              - name: apply_date
+                type: date
+                index: 22
+              - name: application_uuid
+                type: string
+                index: 23
+              - name: approval_status
+                type: string
+                index: 24
+              - name: application_type
+                type: string
+                index: 25
+              - name: rejection_reason
+                type: string
+                index: 26
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 14
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 21
+              - name: apply_date
+                type: date
+                index: 22
+              - name: application_uuid
+                type: string
+                index: 23
+              - name: approval_status
+                type: string
+                index: 24
+              - name: application_type
+                type: string
+                index: 25
+              - name: rejection_reason
+                type: string
+                index: 26
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 14
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 21
+              - name: apply_date
+                type: date
+                index: 22
+              - name: application_uuid
+                type: string
+                index: 23
+              - name: approval_status
+                type: string
+                index: 24
+              - name: application_type
+                type: string
+                index: 25
+              - name: rejection_reason
+                type: string
+                index: 26
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/application.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 14
+          type: string
+        tags:
+          - name: application
+            props:
+              - name: apply_agent_id
+                type: string
+                index: 21
+              - name: apply_date
+                type: date
+                index: 22
+              - name: application_uuid
+                type: string
+                index: 23
+              - name: approval_status
+                type: string
+                index: 24
+              - name: application_type
+                type: string
+                index: 25
+              - name: rejection_reason
+                type: string
+                index: 26
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 28
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 33
+              - name: gender
+                type: string
+                index: 34
+              - name: birth
+                type: date
+                index: 35
+              - name: addr
+                type: string
+                index: 1
+              - name: degree
+                type: string
+                index: 2
+              - name: occupation
+                type: string
+                index: 3
+              - name: year_salary
+                type: string
+                index: 4
+              - name: is_risky
+                type: string
+                index: 5
+              - name: risk_comment
+                type: string
+                index: 6
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 28
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 33
+              - name: gender
+                type: string
+                index: 34
+              - name: birth
+                type: date
+                index: 35
+              - name: addr
+                type: string
+                index: 1
+              - name: degree
+                type: string
+                index: 2
+              - name: occupation
+                type: string
+                index: 3
+              - name: year_salary
+                type: string
+                index: 4
+              - name: is_risky
+                type: string
+                index: 5
+              - name: risk_comment
+                type: string
+                index: 6
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 28
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 33
+              - name: gender
+                type: string
+                index: 34
+              - name: birth
+                type: date
+                index: 35
+              - name: addr
+                type: string
+                index: 1
+              - name: degree
+                type: string
+                index: 2
+              - name: occupation
+                type: string
+                index: 3
+              - name: year_salary
+                type: string
+                index: 4
+              - name: is_risky
+                type: string
+                index: 5
+              - name: risk_comment
+                type: string
+                index: 6
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 28
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 31
+              - name: gender
+                type: string
+                index: 32
+              - name: birth
+                type: date
+                index: 33
+              - name: addr
+                type: string
+                index: 1
+              - name: degree
+                type: string
+                index: 2
+              - name: occupation
+                type: string
+                index: 3
+              - name: year_salary
+                type: string
+                index: 4
+              - name: is_risky
+                type: string
+                index: 5
+              - name: risk_comment
+                type: string
+                index: 6
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 29
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 36
+              - name: gender
+                type: string
+                index: 37
+              - name: birth
+                type: date
+                index: 38
+              - name: addr
+                type: string
+                index: 15
+              - name: degree
+                type: string
+                index: 16
+              - name: occupation
+                type: string
+                index: 17
+              - name: year_salary
+                type: string
+                index: 18
+              - name: is_risky
+                type: string
+                index: 19
+              - name: risk_comment
+                type: string
+                index: 20
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 29
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 36
+              - name: gender
+                type: string
+                index: 37
+              - name: birth
+                type: date
+                index: 38
+              - name: addr
+                type: string
+                index: 15
+              - name: degree
+                type: string
+                index: 16
+              - name: occupation
+                type: string
+                index: 17
+              - name: year_salary
+                type: string
+                index: 18
+              - name: is_risky
+                type: string
+                index: 19
+              - name: risk_comment
+                type: string
+                index: 20
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 29
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 36
+              - name: gender
+                type: string
+                index: 37
+              - name: birth
+                type: date
+                index: 38
+              - name: addr
+                type: string
+                index: 15
+              - name: degree
+                type: string
+                index: 16
+              - name: occupation
+                type: string
+                index: 17
+              - name: year_salary
+                type: string
+                index: 18
+              - name: is_risky
+                type: string
+                index: 19
+              - name: risk_comment
+                type: string
+                index: 20
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/applicant.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: vertex
+      vertex:
+        vid:
+          index: 29
+          type: string
+        tags:
+          - name: applicant
+            props:
+              - name: name
+                type: string
+                index: 34
+              - name: gender
+                type: string
+                index: 35
+              - name: birth
+                type: date
+                index: 36
+              - name: addr
+                type: string
+                index: 15
+              - name: degree
+                type: string
+                index: 16
+              - name: occupation
+                type: string
+                index: 17
+              - name: year_salary
+                type: string
+                index: 18
+              - name: is_risky
+                type: string
+                index: 19
+              - name: risk_comment
+                type: string
+                index: 20
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 0
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 8
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 0
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 8
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 0
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 8
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 28
+          type: string
+        dstVID:
+          index: 0
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 8
+  - path: /data/applicant_application_with_shared_device.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 14
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 22
+  - path: /data/applicant_application_with_shared_employer.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 14
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 22
+  - path: /data/applicant_application_with_shared_phone_num.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 14
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 22
+  - path: /data/applicant_application_with_shared_via_employer_phone_num.csv
+    failDataPath: ./err/data/applied_for_loan.csv
+    batchSize: 128
+    type: csv
+    csv:
+      withHeader: false
+      withLabel: false
+      delimiter: ','
+    schema:
+      type: edge
+      edge:
+        name: applied_for_loan
+        withRanking: false
+        srcVID:
+          index: 29
+          type: string
+        dstVID:
+          index: 14
+          type: string
+        props:
+          - name: start_time
+            type: date
+            index: 22
