@@ -560,8 +560,8 @@ class FraudDetectionDataGenerator:
             (edges[start_index:end_index].reset_index(drop=True),
              is_relative_rels),
             axis=1)
-        # header "person_id, dst_person_id, degree"
-        header = ["person_id", "contact_id", "degree"]
+        # header "person_id, dst_person_id, level"
+        header = ["person_id", "contact_id", "level"]
         _path = "data/is_relative_relationship.csv"
         concat_is_relative_rels.to_csv(_path,
                                        sep=",",
