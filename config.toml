@@ -24,19 +24,26 @@ networkfile = "data/abcd/edge.dat"      # name of file do generate that contains
 ##############################################################################
 ## Data Generator Configurations                                            ##
 ##############################################################################
+vertex_id_format = "string"                    # numerical or string
 phone_number_id_prefix = "pn_"                 # prefix for phone number id
+phone_number_id_prefix_num = "1000000"         # prefix for phone number id in numerical format
 phone_number_count = "90000"                   # number of phone numbers to generate
 person_id_prefix = "p_"                        # prefix for person id
+person_id_prefix_num = "2000000"               # prefix for person id in numerical format
 loan_application_id_prefix = "la_"             # prefix for loan application id
+loan_application_id_prefix_num = "3000000"     # prefix for loan application id in numerical format
 device_id_prefix = "dev_"                      # prefix for device id
+device_id_prefix_num = "4000000"               # prefix for device id in numerical format
 device_count = "80000"                         # number of devices to generate
 data_language = "en_US"                        # Change to "zh_CN" for generating Chinese version dataset
 corporation_id_prefix = "co_"                  # prefix for corporation id
+corporation_id_prefix_num = "5000000"          # prefix for corporation id in numerical format
 corporation_count = "9500"                     # number of corporations to generate
 chance_of_corporation_risky_percentage = "1.3" # "1.3" means 1.3% of chance for a corporation being risky
 chance_of_application_rejected = "0.01"        # "1" mmeas 1% of chance for a loan application being rejected
 chance_of_applicant_risky_percentage = "2.3"   # "2.3" means 1.3% of chance for a applicant being risky
 applicant_id_prefix = "p_"                     # prefix for applicant id, note, it comes with same numerical part as person id
+applicant_id_prefix_num = "2000000"            # prefix for applicant id in numerical format 
 ##############################################################################
 ## This defines how edges are breaking down into different patterns         ##
 ##############################################################################
