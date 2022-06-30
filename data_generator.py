@@ -88,16 +88,31 @@ class FraudDetectionDataGenerator:
         self.conf = self.get_conf()
         self.faker = Faker(self.conf["data_language"])
         self.person_count = int(self.conf["n"])
-        self.person_id_prefix = self.conf["person_id_prefix"]
-        self.applicant_id_prefix = self.conf["applicant_id_prefix"]
+        self.is_num_vertexid = bool(self.conf["vertex_id_format"] == "numerical")
+
+        if self.is_num_vertexid:
+            self.person_id_prefix = self.conf["person_id_prefix_num"]
+            self.applicant_id_prefix = self.conf["applicant_id_prefix_num"]
+            self.phone_number_id_prefix = self.conf["phone_number_id_prefix_num"]
+            self.device_id_prefix = self.conf["device_id_prefix_num"]
+            self.corporation_id_prefix = self.conf["corporation_id_prefix_num"]
+            self.loan_application_id_prefix = self.conf["loan_application_id_prefix_num"]
+        else:
+            self.person_id_prefix = self.conf["person_id_prefix"]
+            self.applicant_id_prefix = self.conf["applicant_id_prefix"]
+            self.phone_number_id_prefix = self.conf["phone_number_id_prefix"]
+            self.device_id_prefix = self.conf["device_id_prefix"]
+            self.corporation_id_prefix = self.conf["corporation_id_prefix"]
+            self.loan_application_id_prefix = self.conf["loan_application_id_prefix"]
+
         self.abcd_edge_path = self.conf["networkfile"]
         self.abcd_data_dir = os.path.dirname(self.abcd_edge_path)
         self.phone_number_count = int(self.conf["phone_number_count"])
-        self.phone_number_id_prefix = self.conf["phone_number_id_prefix"]
-        self.device_id_prefix = self.conf["device_id_prefix"]
+        
+        
         self.device_count = int(self.conf["device_count"])
         self.corporation_count = int(self.conf["corporation_count"])
-        self.corporation_id_prefix = self.conf["corporation_id_prefix"]
+        
         self.process_count = int(self.conf["process_count"])
         Path("data").mkdir(parents=True, exist_ok=True)
 
@@ -573,7 +588,7 @@ class FraudDetectionDataGenerator:
 
     def generate_applicants_and_applications_with_is_related_to(self):
         _ = """
-        // is related to
+        -- is related to
         (loan_applicant:appliant) -[:is_related_to]->(contact:person)
         (loan_applicant:appliant) -[:applied_for_loan]->(app:loan_application)
         """
@@ -597,7 +612,7 @@ class FraudDetectionDataGenerator:
                         loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
-                        index_prefix=self.conf["loan_application_id_prefix"] +
+                        index_prefix=self.loan_application_id_prefix +
                         "r_",
                         header=header)
         applicant_application = pd.read_csv(
@@ -654,14 +669,14 @@ class FraudDetectionDataGenerator:
                         loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
-                        index_prefix=self.conf["loan_application_id_prefix"] +
+                        index_prefix=self.loan_application_id_prefix +
                         pattern_name[7] + "_",
                         header=header_0)
         self.csv_writer(_path_1,
                         loan_application_count,
                         self.loan_applicant_and_application_generator,
                         index=True,
-                        index_prefix=self.conf["loan_application_id_prefix"] +
+                        index_prefix=self.loan_application_id_prefix +
                         pattern_name[7] + "_",
                         header=header_1,
                         init_index=loan_application_count + 1)
