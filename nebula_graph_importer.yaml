@@ -19,6 +19,7 @@ clientSettings:
       CREATE TAG phone_num (phone_num string);
       CREATE TAG device (device_id string);
       CREATE TAG person (name string);
+      CREATE TAG louvain (louvain int);
       CREATE TAG applicant (name string, gender string, birth date, addr string, degree string, occupation string, year_salary string, is_risky string, risk_comment string);
       CREATE EDGE applied_for_loan (start_time date); 
       CREATE EDGE with_phone_num (start_time date);
