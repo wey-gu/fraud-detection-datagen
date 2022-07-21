@@ -1,6 +1,6 @@
 ## How to use the data
 
-First to bootstrap your Nebula Graph cluster, here, for single server playground, try with [nebula-up](https://github.com/wey-gu/nebula-up/).
+First, to bootstrap your Nebula Graph cluster, here, for a single server playground, try with [nebula-up](https://github.com/wey-gu/nebula-up/).
 
 Then, assuming you have a Nebula Graph cluster running in docker with network namespace: `nebula-net`, you can use the following command call Nebula Graph Importer to import data into Nebula Graph, with its configuration from `nebula_graph_importer.yaml`:
 
@@ -17,6 +17,18 @@ docker run --rm -ti \
     -v ${PWD}/data/:/data \
     vesoft/nebula-importer:v3.1.0 \
     --config /root/nebula_graph_importer.yaml
+```
+
+> Note, to leverage the data in [NebulaGraph Algorithm](https://github.com/vesoft-inc/nebula-algorithm/), it's recommended to configure `vertex_id_format` as `numerical`.
+> This is an example to run the Louvain algorithm:
+```bash
+cd ~/.nebula-up/nebula-up/spark
+
+docker exec -it sparkmaster /spark/bin/spark-submit \
+    --master "local" --conf spark.rpc.askTimeout=6000s \
+    --class com.vesoft.nebula.algorithm.Main \
+    --driver-memory 4g /root/download/nebula-algo.jar \
+    -p /root/louvain.conf
 ```
 
 ## How to generate data

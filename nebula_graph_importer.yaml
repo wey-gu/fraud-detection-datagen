@@ -26,6 +26,7 @@ clientSettings:
       CREATE EDGE is_related_to (start_time date, level int);
       CREATE EDGE worked_for (start_time date);
       CREATE EDGE used_device (start_time date);
+      CREATE TAG INDEX louvain_index on louvain(louvain);
     afterPeriod: 20s
 logPath: ./err/test.log
 files:
