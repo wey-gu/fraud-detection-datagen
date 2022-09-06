@@ -146,14 +146,16 @@ class FraudDetectionDataGenerator:
 
         data_path: path to data
         """
-        from julia import Main
+        # from julia import Main
+        import subprocess
 
         # Create data directory if not exists
         Path(data_path).mkdir(parents=True, exist_ok=True)
         # Run ABCD sample to generate Relationship data with community structure
         log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta] to generate community structured data..."
             )
-        Main.include(ABCD_SAMPLER_PATH)
+        # Main.include(ABCD_SAMPLER_PATH)
+        subprocess.run(["julia", ABCD_SAMPLER_PATH])
         log(f"Calling [bold magenta]{ABCD_SAMPLER_PATH}[/bold magenta]...[green]✓[/green]. Data generated at [bold magenta]{self.abcd_data_dir}[/bold magenta]"
             )
 
@@ -790,7 +792,7 @@ def gen_homogeneous_rel_with_community(step):
         f"[bold blue][ Step {step} ] [/bold blue]",
         "Run ABCD sample to generate relationship data with community structure"
     )
-    gen.init_julia()
+    # gen.init_julia() # let's use subprocess to call julia instead due to #10
     gen.run_abcd_sample(gen.abcd_data_dir)
 
 
