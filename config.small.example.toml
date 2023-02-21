@@ -1,0 +1,59 @@
+##############################################################################
+## ABCDGraphGenerator.jl Configurations                                     ##
+##############################################################################
+d_min = "1"                   # minimum degree, cannot be 0
+d_max = "3"                   # maximum degree
+c_min = "5"                  # minimum cluster size
+c_max = "20"                 # maximum cluster size
+c_max_iter = "1000"           # maximum number of iterations for sampling cluster sizes
+n = "200"                  # number of contact/person vertices in graph
+##############################################################################
+seed = "42"                   # RNG seed, use "" for no seeding
+t1 = "3"                      # power-law exponent for degree distribution
+d_max_iter = "1000"           # maximum number of iterations for sampling degrees
+t2 = "2"                      # power-law exponent for cluster size distribution
+# Exactly one of xi and mu must be passed as Float64. Also if xi is provided islocal must be set to false or omitted.
+xi = "0.2"                    # fraction of edges to fall in background graph
+#mu = "0.2"                   # mixing parameter
+islocal = "false"             # if "true" mixing parameter is restricted to local cluster, otherwise it is global
+isCL = "false"                # if "false" use configuration model, if "true" use Chung-Lu
+degreefile = "data/abcd/deg.dat"        # name of file do generate that contains vertex degrees
+communitysizesfile = "data/abcd/cs.dat" # name of file do generate that contains community sizes
+communityfile = "data/abcd/com.dat"     # name of file do generate that contains assignments of vertices to communities
+networkfile = "data/abcd/edge.dat"      # name of file do generate that contains edges of the generated graph
+##############################################################################
+## Data Generator Configurations                                            ##
+##############################################################################
+vertex_id_format = "string"                    # numerical or string
+phone_number_id_prefix = "pn_"                 # prefix for phone number id
+phone_number_id_prefix_num = "1000000"         # prefix for phone number id in numerical format
+phone_number_count = "200"                   # number of phone numbers to generate
+person_id_prefix = "p_"                        # prefix for person id
+person_id_prefix_num = "2000000"               # prefix for person id in numerical format
+loan_application_id_prefix = "la_"             # prefix for loan application id
+loan_application_id_prefix_num = "3000000"     # prefix for loan application id in numerical format
+device_id_prefix = "dev_"                      # prefix for device id
+device_id_prefix_num = "4000000"               # prefix for device id in numerical format
+device_count = "400"                         # number of devices to generate
+data_language = "en_US"                        # Change to "zh_CN" for generating Chinese version dataset
+corporation_id_prefix = "co_"                  # prefix for corporation id
+corporation_id_prefix_num = "5000000"          # prefix for corporation id in numerical format
+corporation_count = "65"                     # number of corporations to generate
+chance_of_corporation_risky_percentage = "1.3" # "1.3" means 1.3% of chance for a corporation being risky
+chance_of_application_rejected = "0.01"        # "1" mmeas 1% of chance for a loan application being rejected
+chance_of_applicant_risky_percentage = "2.3"   # "2.3" means 1.3% of chance for a applicant being risky
+applicant_id_prefix = "p_"                     # prefix for applicant id, note, it comes with same numerical part as person id
+applicant_id_prefix_num = "2000000"            # prefix for applicant id in numerical format
+##############################################################################
+## This defines how edges are breaking down into different patterns         ##
+##############################################################################
+relation_via_phone_num_ratio = "0.2"           # (:p)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
+relation_via_device_ratio = "0.45"             # (:p)-[:used_dev]->(:dev)<-[:used_dev]-(:p)
+relation_shared_employer_ratio = "0.1"         # (:p)-[:worked_for]->(:corp)<-[:worked_for]-(:p)
+relation_via_employer_phone_num_ratio = "0.05" # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
+# is_related_to_ratio = 1 - sum(<above-all>)   # (:applicant)-[:is_related_to]->(:p)
+##############################################################################
+## Computation                                                              ##
+##############################################################################
+process_count = "8"                 # number of processes to run in parallel
+##############################################################################
