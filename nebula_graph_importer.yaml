@@ -12,7 +12,7 @@ clientSettings:
     address: 'graphd:9669,graphd1:9669,graphd2:9669' # change to your nebula graph's graphd address
   postStart:
     commands: >
-      CREATE SPACE frauddetection (partition_num = 120, replica_factor = 1, vid_type = FIXED_STRING(32));
+      CREATE SPACE frauddetection (partition_num = 5, replica_factor = 1, vid_type = FIXED_STRING(32));
       USE frauddetection;
       CREATE TAG corp (corp_name string, phone_num string, is_risky string, risk_comment string);
       CREATE TAG application (apply_agent_id string, apply_date date, application_uuid string, approval_status string, application_type string, rejection_reason string);
