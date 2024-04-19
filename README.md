@@ -160,3 +160,8 @@ data
     # (:p)-[:worked_for]->(:corp)-[:with_phone_num]->(:phone_num)<-[:with_phone_num]-(:p)
 ```
 
+### How to play with the data:
+
+https://github.com/wey-gu/fraud-detection-datagen/assets/1651790/95781467-7454-4763-b0c2-17e7b33e639a
+
+See here: https://siwei.io/en/fraud-detection-with-nebulagraph/ for more!
